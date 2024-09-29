@@ -6,6 +6,7 @@
 
 > [!TIP]
 > **Backoff** is a strategy used to manage retry intervals when handling transient failures in a system. Instead of retrying an operation immediately after a failure, the backoff mechanism increases the waiting period between retries, often to prevent overloading the system or further exacerbating the issue.
+>
 > **Jitter** is a technique used in conjunction with backoff strategies to introduce randomness to the retry intervals. Its main goal is to avoid the "thundering herd" problem, where multiple clients or processes attempt to retry a failed operation at the same time, overwhelming the system or service they're interacting with.
 
 ## Resource
