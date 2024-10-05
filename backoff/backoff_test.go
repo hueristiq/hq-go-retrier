@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hueristiq/hqgoretry/backoff"
+	"github.com/hueristiq/hq-go-retrier/backoff"
 	"github.com/stretchr/testify/assert"
 )
 

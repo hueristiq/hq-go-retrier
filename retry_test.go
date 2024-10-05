@@ -1,4 +1,4 @@
-package hqgoretry_test
+package retrier_test
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hueristiq/hqgoretry"
-	"github.com/hueristiq/hqgoretry/backoff"
+	retrier "github.com/hueristiq/hq-go-retrier"
+	"github.com/hueristiq/hq-go-retrier/backoff"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -38,11 +38,11 @@ func TestRetry_SuccessAfterFailures(t *testing.T) {
 	mockOp := &mockOperation{failureCount: 2} // Fail twice, then succeed
 	ctx := context.Background()
 
-	err := hqgoretry.Retry(ctx, mockOp.Operation,
-		hqgoretry.WithMaxRetries(5),
-		hqgoretry.WithMinDelay(10*time.Millisecond),
-		hqgoretry.WithMaxDelay(50*time.Millisecond),
-		hqgoretry.WithBackoff(backoff.Exponential()))
+	err := retrier.Retry(ctx, mockOp.Operation,
+		retrier.WithMaxRetries(5),
+		retrier.WithMinDelay(10*time.Millisecond),
+		retrier.WithMaxDelay(50*time.Millisecond),
+		retrier.WithBackoff(backoff.Exponential()))
 
 	require.NoError(t, err, "Expected operation to succeed after retries")
 	assert.Equal(t, 3, mockOp.callCount, "Expected the operation to be called 3 times")
@@ -54,11 +54,11 @@ func TestRetry_MaxRetriesExceeded(t *testing.T) {
 	mockOp := &mockOperation{failureCount: 10} // Will fail more times than the allowed retries
 	ctx := context.Background()
 
-	err := hqgoretry.Retry(ctx, mockOp.Operation,
-		hqgoretry.WithMaxRetries(3),
-		hqgoretry.WithMinDelay(10*time.Millisecond),
-		hqgoretry.WithMaxDelay(50*time.Millisecond),
-		hqgoretry.WithBackoff(backoff.Exponential()))
+	err := retrier.Retry(ctx, mockOp.Operation,
+		retrier.WithMaxRetries(3),
+		retrier.WithMinDelay(10*time.Millisecond),
+		retrier.WithMaxDelay(50*time.Millisecond),
+		retrier.WithBackoff(backoff.Exponential()))
 
 	require.Error(t, err, "Expected operation to fail after retries")
 	assert.Equal(t, 3, mockOp.callCount, "Expected the operation to be called 3 times")
@@ -72,11 +72,11 @@ func TestRetryWithContext_Timeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	err := hqgoretry.Retry(ctx, mockOp.Operation,
-		hqgoretry.WithMaxRetries(5),
-		hqgoretry.WithMinDelay(30*time.Millisecond),
-		hqgoretry.WithMaxDelay(100*time.Millisecond),
-		hqgoretry.WithBackoff(backoff.Exponential()))
+	err := retrier.Retry(ctx, mockOp.Operation,
+		retrier.WithMaxRetries(5),
+		retrier.WithMinDelay(30*time.Millisecond),
+		retrier.WithMaxDelay(100*time.Millisecond),
+		retrier.WithBackoff(backoff.Exponential()))
 
 	require.Error(t, err, "Expected operation to fail due to context timeout")
 	require.ErrorIs(t, err, context.DeadlineExceeded, "Expected timeout error")
@@ -99,11 +99,11 @@ func TestRetryWithData_Success(t *testing.T) {
 		return 42, nil
 	}
 
-	result, err := hqgoretry.RetryWithData(ctx, operationWithData,
-		hqgoretry.WithMaxRetries(5),
-		hqgoretry.WithMinDelay(10*time.Millisecond),
-		hqgoretry.WithMaxDelay(50*time.Millisecond),
-		hqgoretry.WithBackoff(backoff.Exponential()))
+	result, err := retrier.RetryWithData(ctx, operationWithData,
+		retrier.WithMaxRetries(5),
+		retrier.WithMinDelay(10*time.Millisecond),
+		retrier.WithMaxDelay(50*time.Millisecond),
+		retrier.WithBackoff(backoff.Exponential()))
 
 	require.NoError(t, err, "Expected operation to succeed after retries")
 	assert.Equal(t, 42, result, "Expected operation result to be 42")
@@ -115,11 +115,11 @@ func TestRetryWithDecorrelatedJitter(t *testing.T) {
 	mockOp := &mockOperation{failureCount: 2}
 	ctx := context.Background()
 
-	err := hqgoretry.Retry(ctx, mockOp.Operation,
-		hqgoretry.WithMaxRetries(5),
-		hqgoretry.WithMinDelay(10*time.Millisecond),
-		hqgoretry.WithMaxDelay(50*time.Millisecond),
-		hqgoretry.WithBackoff(backoff.ExponentialWithDecorrelatedJitter()))
+	err := retrier.Retry(ctx, mockOp.Operation,
+		retrier.WithMaxRetries(5),
+		retrier.WithMinDelay(10*time.Millisecond),
+		retrier.WithMaxDelay(50*time.Millisecond),
+		retrier.WithBackoff(backoff.ExponentialWithDecorrelatedJitter()))
 
 	require.NoError(t, err, "Expected operation to succeed after retries with decorrelated jitter")
 	assert.Equal(t, 3, mockOp.callCount, "Expected the operation to be called 3 times")
@@ -131,11 +131,11 @@ func TestRetry_FullJitter(t *testing.T) {
 	mockOp := &mockOperation{failureCount: 2}
 	ctx := context.Background()
 
-	err := hqgoretry.Retry(ctx, mockOp.Operation,
-		hqgoretry.WithMaxRetries(5),
-		hqgoretry.WithMinDelay(10*time.Millisecond),
-		hqgoretry.WithMaxDelay(50*time.Millisecond),
-		hqgoretry.WithBackoff(backoff.ExponentialWithFullJitter()))
+	err := retrier.Retry(ctx, mockOp.Operation,
+		retrier.WithMaxRetries(5),
+		retrier.WithMinDelay(10*time.Millisecond),
+		retrier.WithMaxDelay(50*time.Millisecond),
+		retrier.WithBackoff(backoff.ExponentialWithFullJitter()))
 
 	require.NoError(t, err, "Expected operation to succeed after retries with full jitter")
 	assert.Equal(t, 3, mockOp.callCount, "Expected the operation to be called 3 times")
@@ -147,11 +147,11 @@ func TestRetry_EqualJitter(t *testing.T) {
 	mockOp := &mockOperation{failureCount: 2}
 	ctx := context.Background()
 
-	err := hqgoretry.Retry(ctx, mockOp.Operation,
-		hqgoretry.WithMaxRetries(5),
-		hqgoretry.WithMinDelay(10*time.Millisecond),
-		hqgoretry.WithMaxDelay(50*time.Millisecond),
-		hqgoretry.WithBackoff(backoff.ExponentialWithEqualJitter()))
+	err := retrier.Retry(ctx, mockOp.Operation,
+		retrier.WithMaxRetries(5),
+		retrier.WithMinDelay(10*time.Millisecond),
+		retrier.WithMaxDelay(50*time.Millisecond),
+		retrier.WithBackoff(backoff.ExponentialWithEqualJitter()))
 
 	require.NoError(t, err, "Expected operation to succeed after retries with equal jitter")
 	assert.Equal(t, 3, mockOp.callCount, "Expected the operation to be called 3 times")
@@ -165,11 +165,11 @@ func TestRetry_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := hqgoretry.Retry(ctx, mockOp.Operation,
-		hqgoretry.WithMaxRetries(5),
-		hqgoretry.WithMinDelay(10*time.Millisecond),
-		hqgoretry.WithMaxDelay(50*time.Millisecond),
-		hqgoretry.WithBackoff(backoff.Exponential()))
+	err := retrier.Retry(ctx, mockOp.Operation,
+		retrier.WithMaxRetries(5),
+		retrier.WithMinDelay(10*time.Millisecond),
+		retrier.WithMaxDelay(50*time.Millisecond),
+		retrier.WithBackoff(backoff.Exponential()))
 
 	require.Error(t, err, "Expected operation to fail due to canceled context")
 	require.ErrorIs(t, err, context.Canceled, "Expected timeout error")

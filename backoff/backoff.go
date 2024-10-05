@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hueristiq/hqgoretry/jitter"
+	"github.com/hueristiq/hq-go-retrier/jitter"
 )
 
 // Backoff is a function type that calculates the delay between retry attempts.

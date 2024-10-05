@@ -1,4 +1,4 @@
-name: 💅 Lint Test
+name: 💅🏻 Lint
 
 on:
     push:
@@ -20,7 +20,7 @@ permissions:
   
 jobs:
     lint:
-        name: Lint Test
+        name: Lint
         runs-on: ubuntu-latest
         steps:
             -

@@ -1,4 +1,4 @@
-name: 🧪 Testing
+name: 🧪 Test
 
 on:
     push:
@@ -16,7 +16,7 @@ on:
     workflow_dispatch:
 
 jobs:
-    build:
+    test:
         name: Test
         strategy:
             matrix:

@@ -2,7 +2,7 @@
 SHELL = /bin/sh
 
 # Define the project name for easy reference.
-PROJECT = "hqgoretry"
+PROJECT = "hq-go-retrier"
 
 # --- Go(Golang) ------------------------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-name: 🚨 CodeQL Analysis
+name: 🚨 Analyze Code (CodeQL)
 
 on:
     push:
@@ -17,7 +17,7 @@ on:
 
 jobs:
     analyze:
-        name: Analyze
+        name: Analyze Code (CodeQL)
         strategy:
             fail-fast: false
             matrix:
