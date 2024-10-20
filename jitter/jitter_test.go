@@ -36,6 +36,17 @@ func TestEqualJitter_MidpointLogic(t *testing.T) {
 	assert.GreaterOrEqual(t, jittered, expectedMidpoint, "Jittered duration should be at least the midpoint")
 }
 
+func TestEqualJitter_ZeroDuration(t *testing.T) {
+	t.Parallel()
+
+	backoff := 0 * time.Second
+
+	jittered := jitter.Equal(backoff)
+
+	// Check that when the backoff is 0, the jittered value should also be 0.
+	assert.Equal(t, 0*time.Second, jittered, "Jittered duration should be 0 when the backoff is 0")
+}
+
 func TestFullJitter(t *testing.T) {
 	t.Parallel()
 
@@ -49,6 +60,17 @@ func TestFullJitter(t *testing.T) {
 		assert.GreaterOrEqual(t, jittered, 0*time.Second, "Jittered duration should be at least 0")
 		assert.Less(t, jittered, backoff, "Jittered duration should be less than the original backoff")
 	}
+}
+
+func TestFullJitter_ZeroDuration(t *testing.T) {
+	t.Parallel()
+
+	backoff := 0 * time.Second
+
+	jittered := jitter.Full(backoff)
+
+	// Check that when the backoff is 0, the jittered value should also be 0.
+	assert.Equal(t, 0*time.Second, jittered, "Jittered duration should be 0 when the backoff is 0")
 }
 
 func TestDecorrelatedJitter_FirstCall(t *testing.T) {
