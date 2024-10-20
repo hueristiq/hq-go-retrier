@@ -7,15 +7,30 @@ import (
 )
 
 // Equal applies an equal jitter strategy to the provided backoff duration.
-// In this strategy, the jittered duration is calculated as the midpoint of the
-// backoff duration plus a random value uniformly selected from the range [0, midpoint).
-// This reduces randomness compared to full jitter but still ensures some variation.
+// This method ensures moderate randomness by adding a jitter value that is
+// calculated as a random number within half of the original backoff time.
+//
+// Equal jitter provides a balance between fixed backoff and full jitter by
+// ensuring that the backoff duration does not deviate too much, reducing
+// the likelihood of excessively short or long delays. This approach is
+// useful for scenarios where consistent retry intervals with a bit of
+// variation are preferred.
 //
 // Parameters:
-//   - backoff: The original backoff duration before applying jitter.
+//   - backoff: The original backoff duration to which jitter will be applied.
+//     This represents the base amount of time to wait before retrying
+//     an operation.
 //
 // Returns:
-//   - jitter: A duration that is the midpoint of the backoff plus a random value between 0 and the midpoint.
+//   - jitter: The resulting backoff duration after applying equal jitter.
+//     It will be the midpoint of the original backoff plus a random
+//     value between 0 and the midpoint.
+//
+// Example:
+//
+//	backoff := 10 * time.Second
+//	jitteredBackoff := jitter.Equal(backoff)
+//	// jitteredBackoff will be somewhere between 5 seconds and 10 seconds.
 func Equal(backoff time.Duration) (jitter time.Duration) {
 	// Calculate the midpoint of the backoff duration.
 	midpoint := backoff / 2
@@ -27,14 +42,26 @@ func Equal(backoff time.Duration) (jitter time.Duration) {
 }
 
 // Full applies a full jitter strategy to the provided backoff duration.
-// In this strategy, the jittered duration is a random value uniformly selected
-// from the range [0, backoff). This method introduces maximum randomness.
+// In this strategy, a random value is selected from the entire range between
+// 0 and the original backoff, providing maximum randomness to the retry delay.
+//
+// Full jitter is useful when you want to distribute the retry attempts more
+// uniformly across a wide range of possible durations, avoiding scenarios
+// where retries happen at consistent intervals, which might overload a
+// system under high contention.
 //
 // Parameters:
-//   - backoff: The original backoff duration before applying jitter.
+//   - backoff: The base backoff duration to be randomized.
 //
 // Returns:
-//   - jitter: A random duration between 0 and the provided backoff duration.
+//   - jitter: A completely random backoff duration between 0 and the original
+//     backoff value.
+//
+// Example:
+//
+//	backoff := 10 * time.Second
+//	jitteredBackoff := jitter.Full(backoff)
+//	// jitteredBackoff will be somewhere between 0 and 10 seconds.
 func Full(backoff time.Duration) (jitter time.Duration) {
 	// Generate a random duration between 0 and the backoff duration.
 	jitter = getRandomDuration(backoff)
@@ -42,19 +69,35 @@ func Full(backoff time.Duration) (jitter time.Duration) {
 	return
 }
 
-// Decorrelated applies a decorrelated jitter strategy, which uses the previous
-// backoff duration to calculate the new jittered duration. This strategy
-// prevents exponential backoff from growing too large, by bounding it within
-// the provided minimum and maximum values.
+// Decorrelated applies a decorrelated jitter strategy to the backoff duration.
+// This method calculates the jittered duration using a random value from a
+// range that is influenced by the previous backoff value. This approach
+// prevents exponential growth of backoff intervals, which could otherwise
+// increase uncontrollably in some retry scenarios.
+//
+// The decorrelated jitter strategy ensures that the backoff is randomized
+// but bounded, making it effective for systems where exponential backoff
+// needs to be capped to avoid overly long retry intervals.
 //
 // Parameters:
-//   - min: The minimum backoff duration.
-//   - max: The maximum backoff duration.
-//   - previous: The previous backoff duration, which influences the next jittered value.
+//   - minDelay: The minimum delay duration for the backoff.
+//   - maxDelay: The maximum allowable delay duration for the backoff.
+//   - previous: The previous backoff duration, used to calculate the new
+//     jittered duration.
 //
 // Returns:
-//   - jitter: A jittered duration that is random but decorrelated from the previous one.
-//     The returned duration is within the range [minDelay, maxDelay].
+//   - jitter: A decorrelated jittered duration that is within the range of
+//     [minDelay, maxDelay]. The next backoff will be influenced by
+//     the previous one but bounded to avoid excessive delays.
+//
+// Example:
+//
+//	minDelay := 1 * time.Second
+//	maxDelay := 30 * time.Second
+//	previous := 5 * time.Second
+//	jitteredBackoff := jitter.Decorrelated(minDelay, maxDelay, previous)
+//	// jitteredBackoff will be somewhere between minDelay and maxDelay,
+//	// bounded by the previous backoff value.
 func Decorrelated(minDelay, maxDelay, previous time.Duration) (jitter time.Duration) {
 	// If this is the first call, use the minimum duration as the previous value.
 	if previous == 0 {
@@ -73,15 +116,28 @@ func Decorrelated(minDelay, maxDelay, previous time.Duration) (jitter time.Durat
 	return
 }
 
-// getRandomDuration returns a random time.Duration value between 0 and maxDuration.
-// It uses a cryptographically secure random number generator (CSPRNG) to produce
-// the random value, ensuring a high degree of unpredictability.
+// getRandomDuration returns a random time.Duration value between 0 and the
+// provided maximum duration. This function uses a cryptographically secure
+// random number generator (CSPRNG) to ensure that the random values are
+// highly unpredictable.
+//
+// By using a CSPRNG, this method guarantees stronger randomness compared
+// to traditional pseudo-random number generators, which is particularly
+// useful in security-sensitive applications.
 //
 // Parameters:
-//   - maxDuration: The maxDurationimum possible duration for the random value. Must be greater than 0.
+//   - maxDuration: The maximum duration from which to select a random value.
+//     This must be a positive value greater than zero.
 //
 // Returns:
-//   - A random duration in the range [0, maxDuration]. If maxDuration is less than or equal to 0, returns 0.
+//   - duration: A random time.Duration value between 0 and maxDuration. If
+//     maxDuration is less than or equal to 0, the function returns
+//     a duration of 0.
+//
+// Example:
+//
+//	randomDuration := getRandomDuration(10 * time.Second)
+//	// randomDuration will be a random time.Duration between 0 and 10 seconds.
 func getRandomDuration(maxDuration time.Duration) (duration time.Duration) {
 	// Return 0 if the maxDurationimum value is invalid or non-positive.
 	if maxDuration <= 0 {
