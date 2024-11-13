@@ -15,15 +15,38 @@ import (
 //   - minDelay: The minimum delay between retries.
 //   - maxDelay: The maximum allowable delay between retries.
 //   - backoff: A function that calculates the backoff duration based on retry attempt number and delay limits.
+//   - notifier: A callback function that gets triggered on each retry attempt, providing feedback on errors and backoff duration.
 type Configuration struct {
-	maxRetries int             // Maximum number of retry attempts.
-	minDelay   time.Duration   // Minimum delay between retry attempts.
-	maxDelay   time.Duration   // Maximum delay between retry attempts.
-	backoff    backoff.Backoff // Backoff strategy used to calculate delay between attempts.
+	maxRetries int
+	minDelay   time.Duration
+	maxDelay   time.Duration
+	backoff    backoff.Backoff
+	notifier   Notifer
 }
+
+// Notifer is a callback function type used to handle notifications during retry attempts.
+// This function is invoked on every retry attempt, providing details about the error that
+// triggered the retry and the calculated backoff duration before the next attempt.
+//
+// Parameters:
+//   - err: The error encountered in the current retry attempt.
+//   - backoff: The duration of backoff calculated before the next retry attempt.
+//
+// Example:
+//
+//	func logNotifier(err error, backoff time.Duration) {
+//	    fmt.Printf("Retrying after error: %v, backoff: %v\n", err, backoff)
+//	}
+type Notifer func(err error, backoff time.Duration)
 
 // Option is a function type used to modify the Configuration of the retrier. Options allow
 // for the flexible configuration of retry policies by applying user-defined settings.
+//
+// Parameters:
+//   - *Configuration: A pointer to the Configuration struct that allows modification of its fields.
+//
+// Returns:
+//   - Option: A functional option that modifies the Configuration struct, allowing customization of retry behavior.
 type Option func(*Configuration)
 
 // WithMaxRetries sets the maximum number of retries for the retry mechanism. When the specified
@@ -96,5 +119,24 @@ func WithMinDelay(delay time.Duration) Option {
 func WithBackoff(strategy backoff.Backoff) Option {
 	return func(c *Configuration) {
 		c.backoff = strategy
+	}
+}
+
+// WithNotifier sets a notifier callback function that gets called on each retry attempt. This function
+// allows users to log, monitor, or perform any action upon each retry attempt by providing error details
+// and the duration of the backoff period.
+//
+// Parameters:
+//   - notifier: A function of type Notifer that will be called on each retry with the error and backoff duration.
+//
+// Returns:
+//   - Option: A functional option that modifies the Configuration to set the notifier function.
+//
+// Example:
+//
+//	retrier.WithNotifier(logNotifier) sets up a notifier that logs each retry attempt.
+func WithNotifier(notifier Notifer) Option {
+	return func(c *Configuration) {
+		c.notifier = notifier
 	}
 }

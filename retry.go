@@ -14,6 +14,10 @@ type Operation func() (err error)
 // withEmptyData wraps an Operation function to convert it into an OperationWithData that
 // returns an empty struct. This is used for cases where the operation does not return any data
 // but can be retried with the same mechanism as data-returning operations.
+//
+// Returns:
+//   - operationWithData: An OperationWithData function that returns an empty struct and error,
+//     allowing non-data-returning operations to be handled by the RetryWithData function.
 func (o Operation) withEmptyData() (operationWithData OperationWithData[struct{}]) {
 	operationWithData = func() (struct{}, error) {
 		return struct{}{}, o()
@@ -45,6 +49,7 @@ type OperationWithData[T any] func() (data T, err error)
 //	err := retrier.Retry(ctx, someOperation, retrier.WithMaxRetries(5), retrier.WithBackoff(backoff.Exponential()))
 //	// Retries 'someOperation' up to 5 times with exponential backoff.
 func Retry(ctx context.Context, operation Operation, opts ...Option) (err error) {
+	// Use RetryWithData with an empty struct as a workaround for non-data-returning operations.
 	_, err = RetryWithData(ctx, operation.withEmptyData(), opts...)
 
 	return
@@ -68,20 +73,17 @@ func Retry(ctx context.Context, operation Operation, opts ...Option) (err error)
 //	result, err := retrier.RetryWithData(ctx, fetchData, retrier.WithMaxRetries(5), retrier.WithBackoff(backoff.Exponential()))
 //	// Retries 'fetchData' up to 5 times with exponential backoff.
 func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], opts ...Option) (result T, err error) {
-	// Set default retry configuration.
 	cfg := &Configuration{
-		maxRetries: 3,                       // Default maximum retries
-		maxDelay:   1000 * time.Millisecond, // Default maximum delay between retries
-		minDelay:   100 * time.Millisecond,  // Default minimum delay between retries
-		backoff:    backoff.Exponential(),   // Default backoff strategy: exponential
+		maxRetries: 3,
+		maxDelay:   1000 * time.Millisecond,
+		minDelay:   100 * time.Millisecond,
+		backoff:    backoff.Exponential(),
 	}
 
-	// Apply any provided options to configure retry behavior.
 	for _, opt := range opts {
 		opt(cfg)
 	}
 
-	// Retry loop up to maxRetries.
 	for attempt := range cfg.maxRetries {
 		select {
 		case <-ctx.Done():
@@ -100,15 +102,20 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 			// If the operation fails, calculate the backoff delay.
 			b := cfg.backoff(cfg.minDelay, cfg.maxDelay, attempt)
 
+			// Trigger notifier if configured, providing feedback on the error and backoff duration.
+			if cfg.notifier != nil {
+				cfg.notifier(err, b)
+			}
+
 			// Wait for the backoff period before the next retry attempt.
 			ticker := time.NewTicker(b)
 
 			select {
 			case <-ticker.C:
-				// Backoff delay is over, stop the ticker and retry.
+				// Backoff delay is over, stop the ticker and proceed to the next retry attempt.
 				ticker.Stop()
 			case <-ctx.Done():
-				// Context is done, stop the ticker and return the context's error.
+				// If the context is done, stop the ticker and return the context's error.
 				ticker.Stop()
 
 				err = ctx.Err()
