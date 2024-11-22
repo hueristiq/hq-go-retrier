@@ -1,8 +1,8 @@
 # hq-go-retrier
 
-![made with go](https://img.shields.io/badge/made%20with-Go-0000FF.svg) [![license](https://img.shields.io/badge/license-MIT-gray.svg?color=0000FF)](https://github.com/hueristiq/hq-go-retrier/blob/master/LICENSE) ![maintenance](https://img.shields.io/badge/maintained%3F-yes-0000FF.svg) [![open issues](https://img.shields.io/github/issues-raw/hueristiq/hq-go-retrier.svg?style=flat&color=0000FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:open) [![closed issues](https://img.shields.io/github/issues-closed-raw/hueristiq/hq-go-retrier.svg?style=flat&color=0000FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:closed) [![contribution](https://img.shields.io/badge/contributions-welcome-0000FF.svg)](https://github.com/hueristiq/hq-go-retrier/blob/master/CONTRIBUTING.md)
+![made with go](https://img.shields.io/badge/made%20with-Go-1E90FF.svg) [![go report card](https://goreportcard.com/badge/github.com/hueristiq/xsubfind3r)](https://goreportcard.com/report/github.com/hueristiq/hq-go-retrier) [![license](https://img.shields.io/badge/license-MIT-gray.svg?color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/blob/master/LICENSE) ![maintenance](https://img.shields.io/badge/maintained%3F-yes-1E90FF.svg) [![open issues](https://img.shields.io/github/issues-raw/hueristiq/hq-go-retrier.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:open) [![closed issues](https://img.shields.io/github/issues-closed-raw/hueristiq/hq-go-retrier.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:closed) [![contribution](https://img.shields.io/badge/contributions-welcome-1E90FF.svg)](https://github.com/hueristiq/hq-go-retrier/blob/master/CONTRIBUTING.md)
 
-`hq-go-retrier` is a [Go (Golang)](http://golang.org/) package designed to manage retries for operations that might temporarily fail. It allows developers to customize how retries are handled using different strategies, such as increasing the wait time between each attempt - backoffs and jitters.
+`hq-go-retrier` is a [Go (Golang)](http://golang.org/) package for managing retries for operations that might temporarily fail. It allows developers to customize how retries are handled using different strategies, such as increasing the wait time between each attempt - backoffs and jitters.
 
 > [!TIP]
 > **Backoff** is a strategy used to manage retry intervals when handling transient failures in a system. Instead of retrying an operation immediately after a failure, the backoff mechanism increases the waiting period between retries, often to prevent overloading the system or further exacerbating the issue.
@@ -14,12 +14,11 @@
 * [Features](#features)
 * [Installation](#installation)
 * [Usage](#usage)
-	* [Configuration Options](#configuration-options)
 * [Contributing](#contributing)
 * [Licensing](#licensing)
 * [Credits](#credits)
 	* [Contributors](#contributors)
-	* [Similar Projects](#similar-projects)
+	* [Alternatives](#alternatives)
 
 ## Features
 
@@ -85,8 +84,6 @@ func main() {
 }
 ```
 
-### Configuration Options
-
 The following options can be used to customize the retry behavior:
 
 * `WithMaxRetries(int)`: Sets the maximum number of retry attempts.
@@ -111,7 +108,7 @@ A huge thanks to all the contributors who have helped make `hq-go-retrier` what 
 
 [![contributors](https://contrib.rocks/image?repo=hueristiq/hq-go-retrier&max=500)](https://github.com/hueristiq/hq-go-retrier/graphs/contributors)
 
-### Similar Projects
+### Alternatives
 
 If you're interested in more packages like this, check out:
 
