@@ -32,10 +32,8 @@ import (
 //	jitteredBackoff := jitter.Equal(backoff)
 //	// jitteredBackoff will be somewhere between 5 seconds and 10 seconds.
 func Equal(backoff time.Duration) (jitter time.Duration) {
-	// Calculate the midpoint of the backoff duration.
 	midpoint := backoff / 2
 
-	// Add a random duration between 0 and the midpoint to the midpoint.
 	jitter = midpoint + getRandomDuration(midpoint)
 
 	return
@@ -63,7 +61,6 @@ func Equal(backoff time.Duration) (jitter time.Duration) {
 //	jitteredBackoff := jitter.Full(backoff)
 //	// jitteredBackoff will be somewhere between 0 and 10 seconds.
 func Full(backoff time.Duration) (jitter time.Duration) {
-	// Generate a random duration between 0 and the backoff duration.
 	jitter = getRandomDuration(backoff)
 
 	return
@@ -99,16 +96,14 @@ func Full(backoff time.Duration) (jitter time.Duration) {
 //	// jitteredBackoff will be somewhere between minDelay and maxDelay,
 //	// bounded by the previous backoff value.
 func Decorrelated(minDelay, maxDelay, previous time.Duration) (jitter time.Duration) {
-	// If this is the first call, use the minimum duration as the previous value.
 	if previous == 0 {
 		previous = minDelay
 	}
 
-	// Generate a random duration within the range [minDelay, previous*3].
 	jitter = getRandomDuration(previous * 3)
+
 	jitter += minDelay
 
-	// Ensure that the jitter does not exceed the maximum duration.
 	if jitter > maxDelay {
 		jitter = maxDelay
 	}
@@ -139,19 +134,15 @@ func Decorrelated(minDelay, maxDelay, previous time.Duration) (jitter time.Durat
 //	randomDuration := getRandomDuration(10 * time.Second)
 //	// randomDuration will be a random time.Duration between 0 and 10 seconds.
 func getRandomDuration(maxDuration time.Duration) (duration time.Duration) {
-	// Return 0 if the maxDurationimum value is invalid or non-positive.
 	if maxDuration <= 0 {
 		return 0
 	}
 
-	// Generate a cryptographically secure random integer between 0 and maxDuration.
 	n, err := rand.Int(rand.Reader, big.NewInt(int64(maxDuration)))
 	if err != nil {
-		// If an error occurs during random number generation, return the maxDurationimum value.
 		return maxDuration
 	}
 
-	// Convert the random integer to a time.Duration and return it.
 	duration = time.Duration(n.Int64())
 
 	return

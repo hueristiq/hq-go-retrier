@@ -8,6 +8,6 @@
 		"editor.formatOnSave": false
 	},
 	"gopls": { 
-		"ui.semanticTokens": true 
+		"ui.semanticTokens": true,
 	}
 }

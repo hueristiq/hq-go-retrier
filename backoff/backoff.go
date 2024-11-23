@@ -42,10 +42,8 @@ type Backoff func(minDelay, maxDelay time.Duration, attempt int) (delay time.Dur
 //	// delay will be 8 seconds (1s * 2^3), but capped at maxDelay if exceeded.
 func Exponential() func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
 	return func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
-		// Calculate the exponential backoff delay based on the attempt number.
 		backoff = time.Duration(math.Pow(2, float64(attempt)) * float64(minDelay))
 
-		// Cap the delay at the maximum value.
 		if backoff > maxDelay {
 			backoff = maxDelay
 		}
@@ -77,18 +75,14 @@ func ExponentialWithEqualJitter() func(minDelay, maxDelay time.Duration, attempt
 	mutex := &sync.Mutex{}
 
 	return func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
-		// Calculate the base exponential backoff delay.
 		backoff = time.Duration(math.Pow(2, float64(attempt)) * float64(minDelay))
 
-		// Lock the mutex to ensure thread-safe jitter calculation.
 		mutex.Lock()
 		jittered := jitter.Equal(backoff)
 		mutex.Unlock()
 
-		// Add the jitter to the base backoff.
 		backoff += jittered
 
-		// Cap the delay at the maximum value.
 		if backoff > maxDelay {
 			backoff = maxDelay
 		}
@@ -120,18 +114,14 @@ func ExponentialWithFullJitter() func(minDelay, maxDelay time.Duration, attempt 
 	mutex := &sync.Mutex{}
 
 	return func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
-		// Calculate the base exponential backoff delay.
 		backoff = time.Duration(math.Pow(2, float64(attempt)) * float64(minDelay))
 
-		// Lock the mutex to ensure thread-safe jitter calculation.
 		mutex.Lock()
 		jittered := jitter.Full(backoff)
 		mutex.Unlock()
 
-		// Add the jitter to the base backoff.
 		backoff += jittered
 
-		// Cap the delay at the maximum value.
 		if backoff > maxDelay {
 			backoff = maxDelay
 		}
@@ -163,21 +153,16 @@ func ExponentialWithDecorrelatedJitter() func(minDelay, maxDelay time.Duration, 
 	mutex := &sync.Mutex{}
 
 	return func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
-		// Calculate the previous backoff delay based on the previous attempt number.
 		previous := time.Duration(math.Pow(2, float64(attempt-1)) * float64(minDelay))
 
-		// Calculate the base exponential backoff delay for the current attempt.
 		backoff = time.Duration(math.Pow(2, float64(attempt)) * float64(minDelay))
 
-		// Lock the mutex to ensure thread-safe jitter calculation.
 		mutex.Lock()
 		jittered := jitter.Decorrelated(minDelay, maxDelay, previous)
 		mutex.Unlock()
 
-		// Add the decorrelated jitter to the base backoff.
 		backoff += jittered
 
-		// Cap the delay at the maximum value.
 		if backoff > maxDelay {
 			backoff = maxDelay
 		}

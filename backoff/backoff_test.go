@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestExponentialBackoff verifies that the Exponential backoff function returns correct delays.
 func TestExponentialBackoff(t *testing.T) {
 	t.Parallel()
 
@@ -28,11 +27,11 @@ func TestExponentialBackoff(t *testing.T) {
 
 	for _, tt := range tests {
 		delay := b(tt.minDelay, tt.maxDelay, tt.attempt)
+
 		assert.Equal(t, tt.expected, delay, "Unexpected backoff duration for attempt %d", tt.attempt)
 	}
 }
 
-// TestExponentialWithEqualJitterBackoff verifies that ExponentialWithEqualJitter returns correct delays with jitter.
 func TestExponentialWithEqualJitterBackoff(t *testing.T) {
 	t.Parallel()
 
@@ -50,12 +49,12 @@ func TestExponentialWithEqualJitterBackoff(t *testing.T) {
 
 	for _, tt := range tests {
 		delay := b(tt.minDelay, tt.maxDelay, tt.attempt)
+
 		assert.GreaterOrEqual(t, delay, tt.minDelay, "Backoff delay should not be less than the minimum")
 		assert.LessOrEqual(t, delay, tt.maxDelay, "Backoff delay should not exceed the maximum")
 	}
 }
 
-// TestExponentialWithFullJitterBackoff verifies that ExponentialWithFullJitter returns correct delays with full jitter.
 func TestExponentialWithFullJitterBackoff(t *testing.T) {
 	t.Parallel()
 
@@ -73,12 +72,12 @@ func TestExponentialWithFullJitterBackoff(t *testing.T) {
 
 	for _, tt := range tests {
 		delay := b(tt.minDelay, tt.maxDelay, tt.attempt)
+
 		assert.GreaterOrEqual(t, delay, tt.minDelay, "Backoff delay should not be less than the minimum")
 		assert.LessOrEqual(t, delay, tt.maxDelay, "Backoff delay should not exceed the maximum")
 	}
 }
 
-// TestExponentialWithDecorrelatedJitterBackoff verifies that ExponentialWithDecorrelatedJitter returns correct delays with decorrelated jitter.
 func TestExponentialWithDecorrelatedJitterBackoff(t *testing.T) {
 	t.Parallel()
 
@@ -96,6 +95,7 @@ func TestExponentialWithDecorrelatedJitterBackoff(t *testing.T) {
 
 	for _, tt := range tests {
 		delay := b(tt.minDelay, tt.maxDelay, tt.attempt)
+
 		assert.GreaterOrEqual(t, delay, tt.minDelay, "Backoff delay should not be less than the minimum")
 		assert.LessOrEqual(t, delay, tt.maxDelay, "Backoff delay should not exceed the maximum")
 	}
