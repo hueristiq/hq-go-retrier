@@ -6,6 +6,8 @@ SHELL = /bin/sh
 # This helps in maintaining a consistent project name and avoiding hardcoding it in multiple places.
 PROJECT = "hq-go-retrier"
 
+# --- Prepare | Setup -------------------------------------------------------------------------------
+
 .PHONY: prepare
 prepare:
 	@# Install the latest version of Lefthook (a Git hooks manager) and set it up.
