@@ -16,6 +16,7 @@ prepare:
 # ------------------------------------------------------------------------------------------------------------------------------
 
 GOCMD=go
+GOCLEAN=$(GOCMD) clean
 GOMOD=$(GOCMD) mod
 GOGET=$(GOCMD) get
 GOFMT=$(GOCMD) fmt
@@ -29,6 +30,10 @@ endif
 
 GOLANGCILINTCMD=golangci-lint
 GOLANGCILINTRUN=$(GOLANGCILINTCMD) run
+
+.PHONY: go-mod-clean
+go-mod-clean:
+	$(GOCLEAN) -modcache
 
 .PHONY: go-mod-tidy
 go-mod-tidy:
@@ -72,6 +77,7 @@ help:
 	@echo "  prepare .................. prepare repository."
 	@echo ""
 	@echo " Go Commands:"
+	@echo "  go-mod-clean ............. Clean Go module cache."
 	@echo "  go-mod-tidy .............. Tidy Go modules."
 	@echo "  go-mod-update ............ Update Go modules."
 	@echo "  go-fmt ................... Format Go code."
