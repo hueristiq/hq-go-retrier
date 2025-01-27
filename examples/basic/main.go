@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	retrier "github.com/hueristiq/hq-go-retrier"
-	"github.com/hueristiq/hq-go-retrier/backoff"
+	"go.sources.hueristiq.com/retrier"
+	"go.sources.hueristiq.com/retrier/backoff"
 )
 
 func main() {

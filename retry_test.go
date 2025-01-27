@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	retrier "github.com/hueristiq/hq-go-retrier"
-	"github.com/hueristiq/hq-go-retrier/backoff"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.sources.hueristiq.com/retrier"
+	"go.sources.hueristiq.com/retrier/backoff"
 )
 
 var errTestOperation = errors.New("operation failed")

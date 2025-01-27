@@ -3,7 +3,7 @@ package retrier
 import (
 	"time"
 
-	"github.com/hueristiq/hq-go-retrier/backoff"
+	"go.sources.hueristiq.com/retrier/backoff"
 )
 
 // Configuration holds the settings for retry operations. These settings determine the behavior

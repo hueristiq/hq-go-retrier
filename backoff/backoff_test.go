@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hueristiq/hq-go-retrier/backoff"
 	"github.com/stretchr/testify/assert"
+	"go.sources.hueristiq.com/retrier/backoff"
 )
 
 func TestExponentialBackoff(t *testing.T) {
