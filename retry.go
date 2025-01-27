@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"go.sources.hueristiq.com/retrier/backoff"
+	"go.source.hueristiq.com/retrier/backoff"
 )
 
 // Operation is a function type that represents an operation that can be retried.

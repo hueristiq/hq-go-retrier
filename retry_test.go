@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"go.sources.hueristiq.com/retrier"
-	"go.sources.hueristiq.com/retrier/backoff"
+	"go.source.hueristiq.com/retrier"
+	"go.source.hueristiq.com/retrier/backoff"
 )
 
 var errTestOperation = errors.New("operation failed")

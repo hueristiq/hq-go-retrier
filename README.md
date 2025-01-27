@@ -32,7 +32,7 @@
 To install the package, run the following command in your terminal:
 
 ```bash
-go get -v -u go.sources.hueristiq.com/retrier
+go get -v -u go.source.hueristiq.com/retrier
 ```
 
 This command will download and install the `hq-go-retrier` package into your Go workspace, making it available for use in your projects.
@@ -50,8 +50,8 @@ import (
 	"fmt"
 	"time"
 
-	"go.sources.hueristiq.com/retrier"
-	"go.sources.hueristiq.com/retrier/backoff"
+	"go.source.hueristiq.com/retrier"
+	"go.source.hueristiq.com/retrier/backoff"
 )
 
 func main() {

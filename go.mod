@@ -1,4 +1,4 @@
-module go.sources.hueristiq.com/retrier
+module go.source.hueristiq.com/retrier
 
 go 1.23.3
 

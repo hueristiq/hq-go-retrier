@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.sources.hueristiq.com/retrier/backoff"
+	"go.source.hueristiq.com/retrier/backoff"
 )
 
 func TestExponentialBackoff(t *testing.T) {
