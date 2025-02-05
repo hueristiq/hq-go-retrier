@@ -16,9 +16,6 @@
 * [Usage](#usage)
 * [Contributing](#contributing)
 * [Licensing](#licensing)
-* [Credits](#credits)
-	* [Contributors](#contributors)
-	* [Alternatives](#alternatives)
 
 ## Features
 
@@ -94,22 +91,12 @@ The following options can be used to customize the retry behavior:
 
 ## Contributing
 
-We welcome contributions! Feel free to submit [Pull Requests](https://github.com/hueristiq/hq-go-retrier/pulls) or report [Issues](https://github.com/hueristiq/hq-go-retrier/issues). For more details, check out the [contribution guidelines](https://github.com/hueristiq/hq-go-retrier/blob/master/CONTRIBUTING.md).
+Feel free to submit [Pull Requests](https://github.com/hueristiq/hq-go-retrier/pulls) or report [Issues](https://github.com/hueristiq/hq-go-retrier/issues). For more details, check out the [contribution guidelines](https://github.com/hueristiq/hq-go-retrier/blob/master/CONTRIBUTING.md).
+
+Huge thanks to the [contributors](https://github.com/hueristiq/hq-go-retrier/graphs/contributors) thus far!
+
+![contributors](https://contrib.rocks/image?repo=hueristiq/hq-go-retrier&max=500)
 
 ## Licensing
 
 This package is licensed under the [MIT license](https://opensource.org/license/mit). You are free to use, modify, and distribute it, as long as you follow the terms of the license. You can find the full license text in the repository - [Full MIT license text](https://github.com/hueristiq/hq-go-retrier/blob/master/LICENSE).
-
-## Credits
-
-### Contributors
-
-A huge thanks to all the contributors who have helped make `hq-go-retrier` what it is today!
-
-[![contributors](https://contrib.rocks/image?repo=hueristiq/hq-go-retrier&max=500)](https://github.com/hueristiq/hq-go-retrier/graphs/contributors)
-
-### Alternatives
-
-If you're interested in more packages like this, check out:
-
-[Cenk Alti's backoff](https://github.com/cenkalti/backoff) ◇ [Avast's retry-go](https://github.com/avast/retry-go)
