@@ -2,17 +2,11 @@
 
 ![made with go](https://img.shields.io/badge/made%20with-Go-1E90FF.svg) [![go report card](https://goreportcard.com/badge/github.com/hueristiq/xsubfind3r)](https://goreportcard.com/report/github.com/hueristiq/hq-go-retrier) [![license](https://img.shields.io/badge/license-MIT-gray.svg?color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/blob/master/LICENSE) ![maintenance](https://img.shields.io/badge/maintained%3F-yes-1E90FF.svg) [![open issues](https://img.shields.io/github/issues-raw/hueristiq/hq-go-retrier.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:open) [![closed issues](https://img.shields.io/github/issues-closed-raw/hueristiq/hq-go-retrier.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:closed) [![contribution](https://img.shields.io/badge/contributions-welcome-1E90FF.svg)](https://github.com/hueristiq/hq-go-retrier/blob/master/CONTRIBUTING.md)
 
-`hq-go-retrier` is a [Go (Golang)](http://golang.org/) package for managing retries for operations that might temporarily fail. It allows developers to customize how retries are handled using different strategies, such as increasing the wait time between each attempt - backoffs and jitters.
-
-> [!TIP]
-> **Backoff** is a strategy used to manage retry intervals when handling transient failures in a system. Instead of retrying an operation immediately after a failure, the backoff mechanism increases the waiting period between retries, often to prevent overloading the system or further exacerbating the issue.
->
-> **Jitter** is a technique used in conjunction with backoff strategies to introduce randomness to the retry intervals. Its main goal is to avoid the "thundering herd" problem, where multiple clients or processes attempt to retry a failed operation at the same time, overwhelming the system or service they're interacting with.
+`hq-go-retrier` is a [Go (Golang)](http://golang.org/) package for managing retries for operations that might temporarily fail. It allows developers to customize how retries are handled using different strategies.
 
 ## Resource
 
 * [Features](#features)
-* [Installation](#installation)
 * [Usage](#usage)
 * [Contributing](#contributing)
 * [Licensing](#licensing)
@@ -24,17 +18,11 @@
 * **Context Support:** Operations can be run with a context to handle cancellation and timeouts gracefully.
 * **Data Handling:** Supports operations that return both data and error, enhancing its usability.
 
-## Installation
-
-To install the package, run the following command in your terminal:
+## Usage
 
 ```bash
 go get -v -u go.source.hueristiq.com/retrier
 ```
-
-This command will download and install the `hq-go-retrier` package into your Go workspace, making it available for use in your projects.
-
-## Usage
 
 Here's a simple example demonstrating how to use `hq-go-retrier`:
 
