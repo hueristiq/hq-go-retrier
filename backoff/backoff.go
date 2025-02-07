@@ -8,7 +8,7 @@ import (
 // It takes a minimum duration, maximum duration, and the current retry attempt number as inputs,
 // and returns the calculated delay duration. Each retry strategy returns a function of this type.
 //
-// Parameters:
+// Arguments:
 //   - minDelay: The minimum allowable delay duration.
 //   - maxDelay: The maximum allowable delay duration.
 //   - attempt:  The current retry attempt number.

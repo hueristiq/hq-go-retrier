@@ -28,7 +28,7 @@ type Configuration struct {
 // This function is invoked on every retry attempt, providing details about the error that
 // triggered the retry and the calculated backoff duration before the next attempt.
 //
-// Parameters:
+// Arguments:
 //   - err: The error encountered in the current retry attempt.
 //   - backoff: The duration of backoff calculated before the next retry attempt.
 //
@@ -42,7 +42,7 @@ type Notifer func(err error, backoff time.Duration)
 // Option is a function type used to modify the Configuration of the retrier. Options allow
 // for the flexible configuration of retry policies by applying user-defined settings.
 //
-// Parameters:
+// Arguments:
 //   - *Configuration: A pointer to the Configuration struct that allows modification of its fields.
 //
 // Returns:
@@ -52,7 +52,7 @@ type Option func(*Configuration)
 // WithMaxRetries sets the maximum number of retries for the retry mechanism. When the specified
 // number of retries is reached, the operation will stop, and the last error will be returned.
 //
-// Parameters:
+// Arguments:
 //   - retries: The maximum number of retry attempts.
 //
 // Returns:
@@ -70,7 +70,7 @@ func WithMaxRetries(retries int) Option {
 // WithMaxDelay sets the maximum allowable delay between retry attempts. This option ensures that
 // the delay between retries never exceeds the specified maximum, even with exponential backoff.
 //
-// Parameters:
+// Arguments:
 //   - delay: The maximum delay duration between retries.
 //
 // Returns:
@@ -88,7 +88,7 @@ func WithMaxDelay(delay time.Duration) Option {
 // WithMinDelay sets the minimum delay between retry attempts. This is the base duration from which
 // the delay calculations start, and it ensures that retries do not occur too quickly in rapid succession.
 //
-// Parameters:
+// Arguments:
 //   - delay: The minimum delay duration between retries.
 //
 // Returns:
@@ -107,7 +107,7 @@ func WithMinDelay(delay time.Duration) Option {
 // strategy determines how the delay grows between retries, and can be customized to use strategies such as
 // exponential backoff with jitter.
 //
-// Parameters:
+// Arguments:
 //   - strategy: A backoff function that defines the backoff strategy.
 //
 // Returns:
@@ -126,7 +126,7 @@ func WithBackoff(strategy backoff.Backoff) Option {
 // allows users to log, monitor, or perform any action upon each retry attempt by providing error details
 // and the duration of the backoff period.
 //
-// Parameters:
+// Arguments:
 //   - notifier: A function of type Notifer that will be called on each retry with the error and backoff duration.
 //
 // Returns:

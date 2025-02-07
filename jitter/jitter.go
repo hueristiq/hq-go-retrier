@@ -16,7 +16,7 @@ import (
 // useful for scenarios where consistent retry intervals with a bit of
 // variation are preferred.
 //
-// Parameters:
+// Arguments:
 //   - backoff: The original backoff duration to which jitter will be applied.
 //     This represents the base amount of time to wait before retrying
 //     an operation.
@@ -48,7 +48,7 @@ func Equal(backoff time.Duration) (jitter time.Duration) {
 // where retries happen at consistent intervals, which might overload a
 // system under high contention.
 //
-// Parameters:
+// Arguments:
 //   - backoff: The base backoff duration to be randomized.
 //
 // Returns:
@@ -76,7 +76,7 @@ func Full(backoff time.Duration) (jitter time.Duration) {
 // but bounded, making it effective for systems where exponential backoff
 // needs to be capped to avoid overly long retry intervals.
 //
-// Parameters:
+// Arguments:
 //   - minDelay: The minimum delay duration for the backoff.
 //   - maxDelay: The maximum allowable delay duration for the backoff.
 //   - previous: The previous backoff duration, used to calculate the new
@@ -120,7 +120,7 @@ func Decorrelated(minDelay, maxDelay, previous time.Duration) (jitter time.Durat
 // to traditional pseudo-random number generators, which is particularly
 // useful in security-sensitive applications.
 //
-// Parameters:
+// Arguments:
 //   - maxDuration: The maximum duration from which to select a random value.
 //     This must be a positive value greater than zero.
 //

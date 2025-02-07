@@ -12,7 +12,7 @@ import (
 //
 // Formula: delay = minDelay * 2^attempt
 //
-// Parameters:
+// Arguments:
 //   - minDelay: The minimum backoff duration (base duration).
 //   - maxDelay: The maximum allowable backoff duration.
 //   - attempt:  The current retry attempt number.
@@ -43,7 +43,7 @@ func Exponential() func(minDelay, maxDelay time.Duration, attempt int) (backoff 
 //
 // Formula: delay = minDelay * 2^attempt + random(midpoint, delay)
 //
-// Parameters:
+// Arguments:
 //   - minDelay: The minimum backoff duration (base duration).
 //   - maxDelay: The maximum allowable backoff duration.
 //   - attempt:  The current retry attempt number.
@@ -76,7 +76,7 @@ func ExponentialWithEqualJitter() func(minDelay, maxDelay time.Duration, attempt
 //
 // Formula: delay = minDelay * 2^attempt + random(0, delay)
 //
-// Parameters:
+// Arguments:
 //   - minDelay: The minimum backoff duration (base duration).
 //   - maxDelay: The maximum allowable backoff duration.
 //   - attempt:  The current retry attempt number.
@@ -109,7 +109,7 @@ func ExponentialWithFullJitter() func(minDelay, maxDelay time.Duration, attempt 
 //
 // Formula: delay = minDelay * 2^attempt + random(previous * 3, delay)
 //
-// Parameters:
+// Arguments:
 //   - minDelay: The minimum backoff duration (base duration).
 //   - maxDelay: The maximum allowable backoff duration.
 //   - attempt:  The current retry attempt number.

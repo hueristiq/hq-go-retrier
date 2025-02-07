@@ -35,7 +35,7 @@ type OperationWithData[T any] func() (data T, err error)
 // If the operation continues to fail, it will retry based on the configuration, which may include max retries,
 // backoff strategies, and min/max delay between retries.
 //
-// Parameters:
+// Arguments:
 //   - ctx: A context to control the lifetime of the retry operation. If the context is canceled or times out,
 //     the retry operation will stop and return the context's error.
 //   - operation: The operation to be retried.
@@ -58,7 +58,7 @@ func Retry(ctx context.Context, operation Operation, opts ...Option) (err error)
 // RetryWithData attempts to execute the provided operation, which returns data along with an error, using the retry mechanism.
 // It retries the operation based on the configuration and returns the result data if successful, or an error if the retries fail.
 //
-// Parameters:
+// Arguments:
 //   - ctx: A context to control the lifetime of the retry operation. If the context is canceled or times out,
 //     the retry operation will stop and return the context's error.
 //   - operation: The operation to be retried, which returns a value of type T and an error.
