@@ -13,12 +13,12 @@ import (
 // Formula: delay = minDelay * 2^attempt
 //
 // Arguments:
-//   - minDelay: The minimum backoff duration (base duration).
-//   - maxDelay: The maximum allowable backoff duration.
-//   - attempt:  The current retry attempt number.
+//   - minDelay (time.Duration): The minimum backoff duration (base duration).
+//   - maxDelay (time.Duration): The maximum allowable backoff duration.
+//   - attempt (int):  The current retry attempt number.
 //
 // Returns:
-//   - delay: The calculated delay duration, capped at the maximum duration.
+//   - delay (time.Duration): The calculated delay duration, capped at the maximum duration.
 //
 // Example:
 //
@@ -44,12 +44,12 @@ func Exponential() func(minDelay, maxDelay time.Duration, attempt int) (backoff 
 // Formula: delay = minDelay * 2^attempt + random(midpoint, delay)
 //
 // Arguments:
-//   - minDelay: The minimum backoff duration (base duration).
-//   - maxDelay: The maximum allowable backoff duration.
-//   - attempt:  The current retry attempt number.
+//   - minDelay (time.Duration): The minimum backoff duration (base duration).
+//   - maxDelay (time.Duration): The maximum allowable backoff duration.
+//   - attempt (int):  The current retry attempt number.
 //
 // Returns:
-//   - delay: The calculated delay with equal jitter applied, capped at the maximum duration.
+//   - delay (time.Duration): The calculated delay with equal jitter applied, capped at the maximum duration.
 //
 // Example:
 //
@@ -77,9 +77,9 @@ func ExponentialWithEqualJitter() func(minDelay, maxDelay time.Duration, attempt
 // Formula: delay = minDelay * 2^attempt + random(0, delay)
 //
 // Arguments:
-//   - minDelay: The minimum backoff duration (base duration).
-//   - maxDelay: The maximum allowable backoff duration.
-//   - attempt:  The current retry attempt number.
+//   - minDelay (time.Duration): The minimum backoff duration (base duration).
+//   - maxDelay (time.Duration): The maximum allowable backoff duration.
+//   - attempt (int):  The current retry attempt number.
 //
 // Returns:
 //   - delay: The calculated delay with full jitter applied, capped at the maximum duration.
@@ -110,12 +110,12 @@ func ExponentialWithFullJitter() func(minDelay, maxDelay time.Duration, attempt 
 // Formula: delay = minDelay * 2^attempt + random(previous * 3, delay)
 //
 // Arguments:
-//   - minDelay: The minimum backoff duration (base duration).
-//   - maxDelay: The maximum allowable backoff duration.
-//   - attempt:  The current retry attempt number.
+//   - minDelay (time.Duration): The minimum backoff duration (base duration).
+//   - maxDelay time.Duration: The maximum allowable backoff duration.
+//   - attempt (int):  The current retry attempt number.
 //
 // Returns:
-//   - delay: The calculated delay with decorrelated jitter applied, capped at the maximum duration.
+//   - delay (time.Duration): The calculated delay with decorrelated jitter applied, capped at the maximum duration.
 //
 // Example:
 //

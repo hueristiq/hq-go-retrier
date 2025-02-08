@@ -1,24 +1,36 @@
-// Package jitter provides functions for applying random jitter to backoff durations.
-// Jitter is a technique used to add randomness to retry intervals, preventing
-// thundering herd issues and reducing load on resources in distributed systems.
+// Package jitter provides various strategies for introducing randomized delays in retry mechanisms.
 //
-// In distributed systems or network environments, multiple clients may retry
-// failed operations simultaneously, leading to increased load on the system.
-// By introducing jitter, the retry intervals are randomized, reducing the
-// chance of synchronized retries (the "thundering herd" problem) and
-// distributing the system load more evenly over time.
+// This package implements multiple jitter strategies, including:
+// - Equal Jitter: Balances between fixed backoff and randomization.
+// - Full Jitter: Provides a completely randomized delay within the range.
+// - Decorrelated Jitter: Prevents uncontrolled exponential growth while maintaining randomness.
 //
-// This package offers three jitter strategies:
-//  1. **Equal Jitter**: Adds moderate randomness to the retry interval by
-//     selecting a random value within half of the original backoff duration.
-//     This is suitable for scenarios where you want some consistency with
-//     slight randomization.
-//  2. **Full Jitter**: Introduces maximum randomness by selecting a retry
-//     interval uniformly between 0 and the original backoff duration. This
-//     is ideal for highly distributed systems where maximum variation is
-//     preferred.
-//  3. **Decorrelated Jitter**: Produces a random backoff duration influenced
-//     by the previous backoff value, keeping the retry interval bounded
-//     within a specified range. This is useful for preventing unbounded
-//     exponential growth in retry delays.
+// These strategies help in mitigating synchronized retry bursts, which can cause excessive load on systems.
+// The jitter functions can be useful in distributed systems, network communication, and backoff policies.
+//
+// Example Usage:
+//
+//	package main
+//
+//	import (
+//	    "fmt"
+//	    "time"
+//	    "go.source.hueristiq.com/retrier/jitter"
+//	)
+//
+//	func main() {
+//	    backoff := 10 * time.Second
+//	    jitteredBackoff := jitter.Equal(backoff)
+//	    fmt.Println("Jittered Backoff:", jitteredBackoff)
+//	}
+//
+// Features:
+// - Provides structured jitter strategies for retry mechanisms.
+// - Implements cryptographic randomness for secure random backoff durations.
+// - Ensures retry intervals are varied to reduce request collisions.
+//
+// Reference:
+// - https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
+//
+// This package is designed to improve resilience and efficiency in retry mechanisms.
 package jitter

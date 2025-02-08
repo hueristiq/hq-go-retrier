@@ -9,6 +9,9 @@ import (
 
 // Operation is a function type that represents an operation that can be retried.
 // The operation returns an error, which indicates whether the operation failed or succeeded.
+//
+// Returns:
+//   - err (error): The error indicating whether the operation succeeded or failed.
 type Operation func() (err error)
 
 // withEmptyData wraps an Operation function to convert it into an OperationWithData that
@@ -16,7 +19,7 @@ type Operation func() (err error)
 // but can be retried with the same mechanism as data-returning operations.
 //
 // Returns:
-//   - operationWithData: An OperationWithData function that returns an empty struct and error,
+//   - operationWithData (OperationWithData[struct{}]): An OperationWithData function that returns an empty struct and error,
 //     allowing non-data-returning operations to be handled by the RetryWithData function.
 func (o Operation) withEmptyData() (operationWithData OperationWithData[struct{}]) {
 	operationWithData = func() (struct{}, error) {
@@ -36,21 +39,20 @@ type OperationWithData[T any] func() (data T, err error)
 // backoff strategies, and min/max delay between retries.
 //
 // Arguments:
-//   - ctx: A context to control the lifetime of the retry operation. If the context is canceled or times out,
+//   - ctx (context.Context): A context to control the lifetime of the retry operation. If the context is canceled or times out,
 //     the retry operation will stop and return the context's error.
-//   - operation: The operation to be retried.
-//   - opts: Optional configuration options that can adjust max retries, backoff strategy, or delay intervals.
+//   - operation (Operation): The operation to be retried.
+//   - options (...Option): Optional configuration options that can adjust max retries, backoff strategy, or delay intervals.
 //
 // Returns:
-//   - err: The error returned by the last failed attempt, or the context's error if the operation is canceled.
+//   - err (err): The error returned by the last failed attempt, or the context's error if the operation is canceled.
 //
 // Example:
 //
 //	err := retrier.Retry(ctx, someOperation, retrier.WithMaxRetries(5), retrier.WithBackoff(backoff.Exponential()))
 //	// Retries 'someOperation' up to 5 times with exponential backoff.
-func Retry(ctx context.Context, operation Operation, opts ...Option) (err error) {
-	// Use RetryWithData with an empty struct as a workaround for non-data-returning operations.
-	_, err = RetryWithData(ctx, operation.withEmptyData(), opts...)
+func Retry(ctx context.Context, operation Operation, options ...Option) (err error) {
+	_, err = RetryWithData(ctx, operation.withEmptyData(), options...)
 
 	return
 }
@@ -59,20 +61,20 @@ func Retry(ctx context.Context, operation Operation, opts ...Option) (err error)
 // It retries the operation based on the configuration and returns the result data if successful, or an error if the retries fail.
 //
 // Arguments:
-//   - ctx: A context to control the lifetime of the retry operation. If the context is canceled or times out,
+//   - ctx (context.Context): A context to control the lifetime of the retry operation. If the context is canceled or times out,
 //     the retry operation will stop and return the context's error.
-//   - operation: The operation to be retried, which returns a value of type T and an error.
-//   - opts: Optional configuration options that can adjust max retries, backoff strategy, or delay intervals.
+//   - operation (OperationWithData[T]): The operation to be retried, which returns a value of type T and an error.
+//   - options (...Option): Optional configuration options that can adjust max retries, backoff strategy, or delay intervals.
 //
 // Returns:
-//   - result: The result of the operation if it succeeds within the allowed retry attempts.
-//   - err: The error returned by the last failed attempt, or the context's error if the operation is canceled.
+//   - result (T): The result of the operation if it succeeds within the allowed retry attempts.
+//   - err (error): The error returned by the last failed attempt, or the context's error if the operation is canceled.
 //
 // Example:
 //
 //	result, err := retrier.RetryWithData(ctx, fetchData, retrier.WithMaxRetries(5), retrier.WithBackoff(backoff.Exponential()))
 //	// Retries 'fetchData' up to 5 times with exponential backoff.
-func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], opts ...Option) (result T, err error) {
+func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], options ...Option) (result T, err error) {
 	cfg := &Configuration{
 		maxRetries: 3,
 		maxDelay:   1000 * time.Millisecond,
@@ -80,42 +82,34 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 		backoff:    backoff.Exponential(),
 	}
 
-	for _, opt := range opts {
-		opt(cfg)
+	for _, option := range options {
+		option(cfg)
 	}
 
 	for attempt := range cfg.maxRetries {
 		select {
 		case <-ctx.Done():
-			// If the context is done, return the context's error.
 			err = ctx.Err()
 
 			return
 		default:
-			// Execute the operation and check for success.
 			result, err = operation()
 			if err == nil {
-				// Operation succeeded, return the result.
 				return
 			}
 
-			// If the operation fails, calculate the backoff delay.
 			b := cfg.backoff(cfg.minDelay, cfg.maxDelay, attempt)
 
-			// Trigger notifier if configured, providing feedback on the error and backoff duration.
 			if cfg.notifier != nil {
 				cfg.notifier(err, b)
 			}
 
-			// Wait for the backoff period before the next retry attempt.
 			ticker := time.NewTicker(b)
 
 			select {
 			case <-ticker.C:
-				// Backoff delay is over, stop the ticker and proceed to the next retry attempt.
 				ticker.Stop()
 			case <-ctx.Done():
-				// If the context is done, stop the ticker and return the context's error.
 				ticker.Stop()
 
 				err = ctx.Err()

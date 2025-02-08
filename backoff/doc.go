@@ -1,21 +1,37 @@
-// Package backoff provides various strategies for calculating retry backoff intervals
-// with optional jitter. Backoff strategies are commonly used in systems where
-// retrying failed operations is necessary, such as network requests, database
-// connections, or API calls. By progressively increasing the wait time between
-// retries, backoff mechanisms can reduce load on resources and prevent overwhelming
-// a system that may be experiencing temporary failure.
+// Package backoff provides strategies for implementing retry mechanisms with controlled delays.
 //
-// This package supports multiple exponential backoff strategies, including:
-//  1. **Exponential Backoff**: A strategy where the delay between retries increases
-//     exponentially based on the number of attempts.
-//  2. **Exponential Backoff with Equal Jitter**: Adds a moderate amount of randomness
-//     to the exponential delay, making the retry interval less predictable.
-//  3. **Exponential Backoff with Full Jitter**: Applies maximum randomness to the
-//     retry interval, introducing full jitter to the exponential delay.
-//  4. **Exponential Backoff with Decorrelated Jitter**: Calculates the retry interval
-//     based on the previous delay, ensuring bounded and random backoff durations.
+// This package includes various exponential backoff strategies, incorporating jitter techniques to
+// prevent synchronized retries, reduce congestion, and improve system resilience.
 //
-// By adding jitter, the retry intervals are randomized, preventing the "thundering herd"
-// problem where multiple clients retry operations simultaneously, leading to further
-// system overload.
+// Available Strategies:
+//   - Exponential: Basic exponential backoff with a growth factor.
+//   - ExponentialWithEqualJitter: Exponential backoff with equal jitter for moderate randomness.
+//   - ExponentialWithFullJitter: Exponential backoff with full jitter for maximum randomness.
+//   - ExponentialWithDecorrelatedJitter: Exponential backoff with decorrelated jitter to prevent
+//     uncontrolled exponential growth.
+//
+// These strategies are useful for retrying failed operations in distributed systems, API calls,
+// and network requests where implementing controlled delays enhances system stability.
+//
+// Example Usage:
+//
+//	package main
+//
+//	import (
+//	    "fmt"
+//	    "time"
+//	    "go.source.hueristiq.com/retrier/backoff"
+//	)
+//
+//	func main() {
+//	    backoffFunc := backoff.Exponential()
+//	    delay := backoffFunc(1*time.Second, 30*time.Second, 3)
+//	    fmt.Println("Retry delay:", delay)
+//	}
+//
+// Reference:
+// - https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
+//
+// This package is designed to optimize retry logic by introducing controlled delays with jitter,
+// reducing congestion and improving overall system efficiency.
 package backoff

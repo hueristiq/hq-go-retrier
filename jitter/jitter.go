@@ -17,12 +17,12 @@ import (
 // variation are preferred.
 //
 // Arguments:
-//   - backoff: The original backoff duration to which jitter will be applied.
+//   - backoff (time.Duration): The original backoff duration to which jitter will be applied.
 //     This represents the base amount of time to wait before retrying
 //     an operation.
 //
 // Returns:
-//   - jitter: The resulting backoff duration after applying equal jitter.
+//   - jitter (time.Duration): The resulting backoff duration after applying equal jitter.
 //     It will be the midpoint of the original backoff plus a random
 //     value between 0 and the midpoint.
 //
@@ -49,10 +49,10 @@ func Equal(backoff time.Duration) (jitter time.Duration) {
 // system under high contention.
 //
 // Arguments:
-//   - backoff: The base backoff duration to be randomized.
+//   - backoff (time.Duration): The base backoff duration to be randomized.
 //
 // Returns:
-//   - jitter: A completely random backoff duration between 0 and the original
+//   - jitter (time.Duration): A completely random backoff duration between 0 and the original
 //     backoff value.
 //
 // Example:
@@ -77,13 +77,13 @@ func Full(backoff time.Duration) (jitter time.Duration) {
 // needs to be capped to avoid overly long retry intervals.
 //
 // Arguments:
-//   - minDelay: The minimum delay duration for the backoff.
-//   - maxDelay: The maximum allowable delay duration for the backoff.
-//   - previous: The previous backoff duration, used to calculate the new
+//   - minDelay (time.Duration): The minimum delay duration for the backoff.
+//   - maxDelay (time.Duration): The maximum allowable delay duration for the backoff.
+//   - previous (time.Duration): The previous backoff duration, used to calculate the new
 //     jittered duration.
 //
 // Returns:
-//   - jitter: A decorrelated jittered duration that is within the range of
+//   - jitter (time.Duration): A decorrelated jittered duration that is within the range of
 //     [minDelay, maxDelay]. The next backoff will be influenced by
 //     the previous one but bounded to avoid excessive delays.
 //
@@ -121,11 +121,11 @@ func Decorrelated(minDelay, maxDelay, previous time.Duration) (jitter time.Durat
 // useful in security-sensitive applications.
 //
 // Arguments:
-//   - maxDuration: The maximum duration from which to select a random value.
+//   - maxDuration (time.Duration): The maximum duration from which to select a random value.
 //     This must be a positive value greater than zero.
 //
 // Returns:
-//   - duration: A random time.Duration value between 0 and maxDuration. If
+//   - duration (time.Duration): A random time.Duration value between 0 and maxDuration. If
 //     maxDuration is less than or equal to 0, the function returns
 //     a duration of 0.
 //
