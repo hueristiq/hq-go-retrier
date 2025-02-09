@@ -57,7 +57,7 @@ func main() {
 		retrier.WithBackoff(backoff.ExponentialWithDecorrelatedJitter()),
 		retrier.WithNotifier(func(err error, backoff time.Duration) {
 			fmt.Printf("Operation failed: %v\n", err)
-			fmt.Printf("...wait %d seconds for the next retry\n\n", backoff)
+			fmt.Printf("...wait %d nanoseconds for the next retry\n\n", backoff)
 		}),
 	)
 
@@ -75,7 +75,7 @@ The following options can be used to customize the retry behavior:
 * `WithMinDelay(time.Duration)`: Sets the minimum delay between retries.
 * `WithMaxDelay(time.Duration)`: Sets the maximum delay between retries.
 * `WithBackoff(backoff.Backoff)`: Sets the backoff strategy to be used.
-* `WithNotifier(notifier)`: Sets a callback function that gets triggered on each retry attempt, providing feedback on errors and backoff.
+* `WithNotifier(Notifier)`: Sets a callback function that gets triggered on each retry attempt, providing feedback on errors and backoff.
 
 ## Contributing
 
