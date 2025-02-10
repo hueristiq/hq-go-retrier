@@ -1,18 +1,8 @@
-// Package retrier provides a flexible and configurable retry mechanism for transient failures.
-//
-// This package allows developers to implement structured retry logic with customizable parameters,
-// such as maximum retries, minimum and maximum delay durations, and backoff strategies. It also
-// includes a notifier callback function for tracking retry attempts.
-//
-// The retrier is useful in scenarios where operations may intermittently fail, such as network requests,
-// database queries, or distributed system interactions. By applying controlled backoff and retry logic,
-// applications can enhance their resilience and prevent unnecessary resource exhaustion.
-//
-// Features:
-// - Configurable retry policies with min/max delay and max retry count.
-// - Supports multiple backoff strategies, including exponential backoff with jitter.
-// - Allows the use of a notifier callback function for logging retry attempts.
-// - Context-aware execution to allow cancellation of retry operations.
+// Package retrier provides configurable retry logic for operations that may fail transiently.
+// It encapsulates settings such as the number of retry attempts, delays between attempts,
+// backoff strategies, and notification callbacks. This allows developers to easily customize
+// the retry behavior for various operations, such as network requests, database transactions,
+// or any operation that benefits from being retried upon failure.
 //
 // Example Usage:
 //
@@ -23,16 +13,18 @@
 //	    "fmt"
 //	    "time"
 //	    "go.source.hueristiq.com/retrier"
-//	    "go.source.hueristiq.com/retrier/retrier"
 //	    "go.source.hueristiq.com/retrier/backoff"
 //	)
 //
 //	func main() {
 //	    ctx := context.Background()
 //	    err := retrier.Retry(ctx, someOperation,
-//	        retrier.WithMaxRetries(5),
-//	        retrier.WithBackoff(backoff.ExponentialWithFullJitter()),
+//	        retrier.WithRetryMax(5),                                    // Allow a maximum of 5 retries.
+//	        retrier.WithRetryWaitMin(100 * time.Millisecond),           // Set the minimum delay to 100ms.
+//	        retrier.WithRetryWaitMax(2 * time.Second),                  // Set the maximum delay to 2 seconds.
+//	        retrier.WithRetryBackoff(backoff.ExponentialWithFullJitter()), // Use exponential backoff with full jitter.
 //	        retrier.WithNotifier(func(err error, backoff time.Duration) {
+//	            // Log the error and the delay before the next retry.
 //	            fmt.Printf("Retrying after error: %v, backoff: %v\n", err, backoff)
 //	        }),
 //	    )
@@ -41,9 +33,9 @@
 //	    }
 //	}
 //
-// Reference:
-// - https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
-//
-// This package is designed to improve reliability in distributed systems by implementing structured
-// retry mechanisms that prevent overwhelming dependent services and optimize request handling.
+// The retrier package offers a highly customizable and flexible approach to implementing retry logic.
+// By leveraging configurable backoff strategies and notifier callbacks, you can tailor retry behavior
+// to the specific requirements of your distributed systems or transient error-prone operations.
+// This package abstracts the complexities of retry management, enabling developers to focus on
+// the core logic of their applications.
 package retrier

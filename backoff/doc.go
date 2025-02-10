@@ -1,7 +1,15 @@
-// Package backoff provides strategies for implementing retry mechanisms with controlled delays.
+// Package backoff provides a collection of functions to generate backoff delays for retry strategies.
+// These functions implement various exponential backoff algorithms — with and without jitter — to help
+// manage retries in network operations, distributed systems, and other fault-tolerant applications.
 //
-// This package includes various exponential backoff strategies, incorporating jitter techniques to
-// prevent synchronized retries, reduce congestion, and improve system resilience.
+// In many retry scenarios, it is beneficial to increase the delay between successive attempts in an
+// exponential manner. However, using pure exponential backoff can lead to synchronization issues (i.e.
+// the "thundering herd" problem) when multiple clients retry simultaneously. To mitigate this, jitter
+// (i.e. randomness) is often added to the delay.
+//
+// This package defines several functions that return a backoff function with the following signature:
+//
+// func(minDelay, maxDelay time.Duration, attempt int) (delay time.Duration)
 //
 // Available Strategies:
 //   - Exponential: Basic exponential backoff with a growth factor.

@@ -17,7 +17,7 @@ on:
     
 permissions:
     contents: read
-  
+
 jobs:
     lint:
         name: Lint

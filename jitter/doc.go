@@ -1,4 +1,6 @@
-// Package jitter provides various strategies for introducing randomized delays in retry mechanisms.
+// Package jitter provides various strategies for applying randomness (jitter) to backoff durations.
+// Jitter is commonly used in retry algorithms to prevent synchronization between multiple clients
+// (reducing the "thundering herd" problem) and to introduce variation in retry timing.
 //
 // This package implements multiple jitter strategies, including:
 // - Equal Jitter: Balances between fixed backoff and randomization.
