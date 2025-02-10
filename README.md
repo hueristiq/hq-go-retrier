@@ -8,7 +8,7 @@
 
 * [Features](#features)
 * [Usage](#usage)
-	* [Basic Retry](#basic-retry)
+	* [Retry](#retry)
 	* [Retry With Data](#retry-with-data)
 * [Contributing](#contributing)
 * [Licensing](#licensing)
@@ -27,7 +27,7 @@
 go get -v -u go.source.hueristiq.com/retrier
 ```
 
-### Basic Retry
+### Retry
 
 The simplest usage of `hq-go-retrier` is to retry an operation that only returns an error. Use the `Retry` function along with any optional configuration options:
 
