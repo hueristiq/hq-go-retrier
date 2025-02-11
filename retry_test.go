@@ -18,6 +18,7 @@ var errTestOperation = errors.New("operation failed")
 // Mock operation that will fail a given number of times before succeeding.
 type mockOperation struct {
 	mock.Mock
+
 	failureCount int
 	callCount    int
 }
@@ -39,7 +40,7 @@ func TestRetry_SuccessAfterFailures(t *testing.T) {
 	ctx := context.Background()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
-		retrier.WithRetryWaitMax(5),
+		retrier.WithRetryMax(5),
 		retrier.WithRetryWaitMin(10*time.Millisecond),
 		retrier.WithRetryWaitMax(50*time.Millisecond),
 		retrier.WithRetryBackoff(backoff.Exponential()))
@@ -56,7 +57,7 @@ func TestRetry_MaxRetriesExceeded(t *testing.T) {
 	ctx := context.Background()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
-		retrier.WithRetryWaitMax(3),
+		retrier.WithRetryMax(3),
 		retrier.WithRetryWaitMin(10*time.Millisecond),
 		retrier.WithRetryWaitMax(50*time.Millisecond),
 		retrier.WithRetryBackoff(backoff.Exponential()))
@@ -76,7 +77,7 @@ func TestRetryWithContext_Timeout(t *testing.T) {
 	defer cancel()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
-		retrier.WithRetryWaitMax(5),
+		retrier.WithRetryMax(5),
 		retrier.WithRetryWaitMin(30*time.Millisecond),
 		retrier.WithRetryWaitMax(100*time.Millisecond),
 		retrier.WithRetryBackoff(backoff.Exponential()))
@@ -104,7 +105,7 @@ func TestRetryWithData_Success(t *testing.T) {
 	}
 
 	result, err := retrier.RetryWithData(ctx, operationWithData,
-		retrier.WithRetryWaitMax(5),
+		retrier.WithRetryMax(5),
 		retrier.WithRetryWaitMin(10*time.Millisecond),
 		retrier.WithRetryWaitMax(50*time.Millisecond),
 		retrier.WithRetryBackoff(backoff.Exponential()))
@@ -121,7 +122,7 @@ func TestRetryWithDecorrelatedJitter(t *testing.T) {
 	ctx := context.Background()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
-		retrier.WithRetryWaitMax(5),
+		retrier.WithRetryMax(5),
 		retrier.WithRetryWaitMin(10*time.Millisecond),
 		retrier.WithRetryWaitMax(50*time.Millisecond),
 		retrier.WithRetryBackoff(backoff.ExponentialWithDecorrelatedJitter()))
@@ -138,7 +139,7 @@ func TestRetry_FullJitter(t *testing.T) {
 	ctx := context.Background()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
-		retrier.WithRetryWaitMax(5),
+		retrier.WithRetryMax(5),
 		retrier.WithRetryWaitMin(10*time.Millisecond),
 		retrier.WithRetryWaitMax(50*time.Millisecond),
 		retrier.WithRetryBackoff(backoff.ExponentialWithFullJitter()))
@@ -155,7 +156,7 @@ func TestRetry_EqualJitter(t *testing.T) {
 	ctx := context.Background()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
-		retrier.WithRetryWaitMax(5),
+		retrier.WithRetryMax(5),
 		retrier.WithRetryWaitMin(10*time.Millisecond),
 		retrier.WithRetryWaitMax(50*time.Millisecond),
 		retrier.WithRetryBackoff(backoff.ExponentialWithEqualJitter()))
@@ -175,7 +176,7 @@ func TestRetry_ContextCanceled(t *testing.T) {
 	cancel()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
-		retrier.WithRetryWaitMax(5),
+		retrier.WithRetryMax(5),
 		retrier.WithRetryWaitMin(10*time.Millisecond),
 		retrier.WithRetryWaitMax(50*time.Millisecond),
 		retrier.WithRetryBackoff(backoff.Exponential()))
