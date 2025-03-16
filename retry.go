@@ -39,7 +39,7 @@ type OperationWithData[T any] func() (data T, err error)
 // Retry will continue attempting until the operation succeeds, the maximum number of retries is
 // reached, or the context is canceled.
 //
-// Arguments:
+// Parameters:
 //   - ctx (context.Context): The context controlling the retry operation. If canceled or timed out,
 //     Retry will stop and return ctx.Err().
 //   - operation (Operation): The operation to be retried. A nil error indicates success.
@@ -67,7 +67,7 @@ func Retry(ctx context.Context, operation Operation, options ...Option) (err err
 // operation if it eventually succeeds. If all retry attempts fail, it returns the error from the
 // last attempt (or the context's error if the context is canceled).
 //
-// Arguments:
+// Parameters:
 //   - ctx (context.Context): The context that controls the retry lifecycle. Cancellation or timeout
 //     will abort further retries.
 //   - operation (OperationWithData[T]): The operation to be retried, returning a value of type T and an error.
@@ -87,7 +87,7 @@ func Retry(ctx context.Context, operation Operation, options ...Option) (err err
 //	    // process result
 //	}
 func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], options ...Option) (result T, err error) {
-	cfg := &Configuration{
+	cfg := &configuration{
 		retryMax:     3,
 		retryWaitMin: 1 * time.Second,
 		retryWaitMax: 30 * time.Second,

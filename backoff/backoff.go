@@ -10,7 +10,7 @@ import (
 // exponential, or jittered backoff) by defining a common function signature. Implementations of this
 // function type determine how long a caller should wait before attempting a retry after a failure.
 //
-// Arguments:
+// Parameters:
 //   - minDelay (time.Duration): The minimum allowable delay duration. This value represents the
 //     smallest amount of time that should be waited between retries, regardless of the retry attempt.
 //   - maxDelay (time.Duration): The maximum allowable delay duration. This value acts as an upper
