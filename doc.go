@@ -32,10 +32,4 @@
 //	        fmt.Println("Operation failed after retries:", err)
 //	    }
 //	}
-//
-// The retrier package offers a highly customizable and flexible approach to implementing retry logic.
-// By leveraging configurable backoff strategies and notifier callbacks, you can tailor retry behavior
-// to the specific requirements of your distributed systems or transient error-prone operations.
-// This package abstracts the complexities of retry management, enabling developers to focus on
-// the core logic of their applications.
 package retrier

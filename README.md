@@ -2,24 +2,23 @@
 
 ![made with go](https://img.shields.io/badge/made%20with-Go-1E90FF.svg) [![go report card](https://goreportcard.com/badge/github.com/hueristiq/xsubfind3r)](https://goreportcard.com/report/github.com/hueristiq/hq-go-retrier) [![license](https://img.shields.io/badge/license-MIT-gray.svg?color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/blob/master/LICENSE) ![maintenance](https://img.shields.io/badge/maintained%3F-yes-1E90FF.svg) [![open issues](https://img.shields.io/github/issues-raw/hueristiq/hq-go-retrier.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:open) [![closed issues](https://img.shields.io/github/issues-closed-raw/hueristiq/hq-go-retrier.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:closed) [![contribution](https://img.shields.io/badge/contributions-welcome-1E90FF.svg)](https://github.com/hueristiq/hq-go-retrier/blob/master/CONTRIBUTING.md)
 
-`hq-go-retrier` is a [Go (Golang)](http://golang.org/) package for managing retries for operations that might temporarily fail. It allows you to easily implement retry logic with customizable parameters such as the number of retries, delays between retries, backoff strategies, and notifications on retry attempts. This package is especially useful in networked, distributed, or fault-tolerant applications where transient errors are common.
+`hq-go-retrier` is a [Go (Golang)](http://golang.org/) package for managing retries for operations that might temporarily fail. It allows you to easily implement retry logic with customizable parameters such as the number of retries, delays between retries, backoff strategies, and notifications on retry attempts.
 
 ## Resource
 
-* [Features](#features)
-* [Usage](#usage)
-	* [Retry](#retry)
-	* [Retry With Data](#retry-with-data)
-* [Contributing](#contributing)
-* [Licensing](#licensing)
+- [Features](#features)
+- [Usage](#usage)
+	- [Retry](#retry)
+	- [Retry With Data](#retry-with-data)
+- [Contributing](#contributing)
+- [Licensing](#licensing)
 
 ## Features
 
-* **Configurable Retry Mechanism:** Easily configure the maximum number of retries, minimum and maximum delays, and backoff strategies.
-* **Flexible Backoff Strategies:** Supports various backoff strategies, including exponential backoff and jitter to manage retries effectively.
-* **Notifier Callback:** Optionally receive notifications for each retry attempt with details about the error and the backoff duration.
-* **Context Support:** Operations can be run with a context to handle cancellation and timeouts gracefully.
-* **Data Handling:** Supports operations that return both data and error, enhancing its usability.
+- Configurable Retry Mechanism
+- Flexible Backoff Strategies
+- Context Support
+- Data Handling
 
 ## Usage
 
