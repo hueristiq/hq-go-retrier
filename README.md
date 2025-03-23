@@ -7,26 +7,34 @@
 ## Resource
 
 - [Features](#features)
+- [Installation](#installation)
 - [Usage](#usage)
-	- [Retry](#retry)
+	- [Basic Retry](#basic-retry)
 	- [Retry With Data](#retry-with-data)
 - [Contributing](#contributing)
 - [Licensing](#licensing)
 
 ## Features
 
-- Configurable Retry Mechanism
-- Flexible Backoff Strategies
-- Context Support
-- Data Handling
+- **Configurable Retry Mechanism:** Customize the maximum number of retries, as well as the delay durations between retries.
+- **Flexible Backoff Strategies:** Choose from various backoff and jitter strategies.
+- **Context Support:** Integrates with Go's context package to support cancellation and timeouts.
+- **Data Handling:** Use retry functions for both simple error-handling and operations that return valuable data.
+- **Notifier Callback:** Get real-time notifications on each retry attempt to log errors or trigger custom actions.
 
-## Usage
+## Installation
+
+To install `hq-go-retrier`, run:
 
 ```bash
 go get -v -u go.source.hueristiq.com/retrier
 ```
 
-### Retry
+Make sure your Go environment is set up properly (Go 1.x or later is recommended).
+
+## Usage
+
+### Basic Retry
 
 The simplest usage of `hq-go-retrier` is to retry an operation that only returns an error. Use the `Retry` function along with any optional configuration options:
 
@@ -43,22 +51,19 @@ import (
 )
 
 func main() {
-	// Define an operation that may fail.
 	operation := func() error {
-		// Replace with your logic that might fail.
 		return fmt.Errorf("an error occurred")
 	}
 
-	// Create a context with timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
 	defer cancel()
 
-	// Retry the operation with custom configuration.
 	err := retrier.Retry(ctx, operation,
-		retrier.WithRetryMax(5),                                    // Maximum 5 retries.
-		retrier.WithRetryWaitMin(100*time.Millisecond),             // Minimum wait of 100ms.
-		retrier.WithRetryWaitMax(2*time.Second),                    // Maximum wait of 2 seconds.
-		retrier.WithRetryBackoff(backoff.ExponentialWithFullJitter()),// Exponential backoff with full jitter.
+		retrier.WithRetryMax(5),
+		retrier.WithRetryWaitMin(100*time.Millisecond),
+		retrier.WithRetryWaitMax(2*time.Second),
+		retrier.WithRetryBackoff(backoff.ExponentialWithFullJitter()),
 		retrier.WithNotifier(func(err error, b time.Duration) {
 			fmt.Printf("Retry due to error: %v. Next attempt in %v.\n", err, b)
 		}),
@@ -87,18 +92,15 @@ import (
 	"go.source.hueristiq.com/retrier/backoff"
 )
 
-// fetchData simulates an operation that returns a string result.
 func fetchData() (string, error) {
-	// Replace with your logic. For example:
 	return "", fmt.Errorf("failed to fetch data")
 }
 
 func main() {
-	// Create a context.
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
 	defer cancel()
 
-	// Retry the operation that returns data.
 	result, err := retrier.RetryWithData(ctx, fetchData,
 		retrier.WithRetryMax(5),
 		retrier.WithRetryWaitMin(200*time.Millisecond),
@@ -110,17 +112,19 @@ func main() {
 	)
 	if err != nil {
 		fmt.Printf("Failed to fetch data after retries: %v\n", err)
+
 		return
 	}
+
 	fmt.Printf("Data fetched successfully: %s\n", result)
 }
 ```
 
 ## Contributing
 
-Feel free to submit [Pull Requests](https://github.com/hueristiq/hq-go-retrier/pulls) or report [Issues](https://github.com/hueristiq/hq-go-retrier/issues). For more details, check out the [contribution guidelines](https://github.com/hueristiq/hq-go-retrier/blob/master/CONTRIBUTING.md).
+Contributions are welcome and encouraged! Feel free to submit [Pull Requests](https://github.com/hueristiq/hq-go-retrier/pulls) or report [Issues](https://github.com/hueristiq/hq-go-retrier/issues). For more details, check out the [contribution guidelines](https://github.com/hueristiq/hq-go-retrier/blob/master/CONTRIBUTING.md).
 
-Huge thanks to the [contributors](https://github.com/hueristiq/hq-go-retrier/graphs/contributors) thus far!
+A big thank you to all the [contributors](https://github.com/hueristiq/hq-go-retrier/graphs/contributors) for your support!
 
 ![contributors](https://contrib.rocks/image?repo=hueristiq/hq-go-retrier&max=500)
 
