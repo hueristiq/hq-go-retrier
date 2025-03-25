@@ -16,7 +16,7 @@
 
 ## Features
 
-- **Configurable Retry Mechanism:** Customize the maximum number of retries, as well as the delay durations between retries.
+- **Configurable Retry Mechanism:** Customize number of retries, as well as the delay between retries.
 - **Flexible Backoff Strategies:** Choose from various backoff and jitter strategies.
 - **Context Support:** Integrates with Go's context package to support cancellation and timeouts.
 - **Data Handling:** Use retry functions for both simple error-handling and operations that return valuable data.
