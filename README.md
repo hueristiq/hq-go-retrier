@@ -2,7 +2,7 @@
 
 ![made with go](https://img.shields.io/badge/made%20with-Go-1E90FF.svg) [![go report card](https://goreportcard.com/badge/github.com/hueristiq/xsubfind3r)](https://goreportcard.com/report/github.com/hueristiq/hq-go-retrier) [![license](https://img.shields.io/badge/license-MIT-gray.svg?color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/blob/master/LICENSE) ![maintenance](https://img.shields.io/badge/maintained%3F-yes-1E90FF.svg) [![open issues](https://img.shields.io/github/issues-raw/hueristiq/hq-go-retrier.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:open) [![closed issues](https://img.shields.io/github/issues-closed-raw/hueristiq/hq-go-retrier.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-go-retrier/issues?q=is:issue+is:closed) [![contribution](https://img.shields.io/badge/contributions-welcome-1E90FF.svg)](https://github.com/hueristiq/hq-go-retrier/blob/master/CONTRIBUTING.md)
 
-`hq-go-retrier` is a [Go (Golang)](http://golang.org/) package for managing retries for operations that might temporarily fail. It allows you to easily implement retry logic with customizable parameters such as the number of retries, delays between retries, backoff strategies, and notifications on retry attempts.
+`hq-go-retrier` is a [Go (Golang)](http://golang.org/) package for managing retries for operations that might temporarily fail. It provides a flexible and configurable retry mechanism that allows developers to define how many times an operation should be retried, set minimum and maximum delays between attempts, and even choose from various backoff and jitter strategies to avoid overwhelming your systems during high load or in distributed environments.
 
 ## Resource
 
@@ -16,11 +16,11 @@
 
 ## Features
 
-- **Configurable Retry Mechanism:** Customize number of retries, as well as the delay between retries.
-- **Flexible Backoff Strategies:** Choose from various backoff and jitter strategies.
-- **Context Support:** Integrates with Go's context package to support cancellation and timeouts.
-- **Data Handling:** Use retry functions for both simple error-handling and operations that return valuable data.
-- **Notifier Callback:** Get real-time notifications on each retry attempt to log errors or trigger custom actions.
+- **Configurable Retry Mechanism:** Supports number of retries, as well as the delay between retries configuration.
+- **Flexible Backoff Strategies:** Supports various backoffs strategies to dynamically increase the wait time between retries.
+- **Context Support:** Supports Go's `context`, enabling graceful cancellation and timeout management.
+- **Data Handling:** In addition to simple error retries, it supports operations that return data once they succeeds.
+- **Notifier Callback:** Supports defination of a notifier callback to receive real-time notifications on each retry attempt.
 
 ## Installation
 
@@ -36,7 +36,7 @@ Make sure your Go environment is set up properly (Go 1.x or later is recommended
 
 ### Basic Retry
 
-The simplest usage of `hq-go-retrier` is to retry an operation that only returns an error. Use the `Retry` function along with any optional configuration options:
+For operations that simply return an error, you can use the `Retry` function:
 
 ```go
 package main
@@ -78,7 +78,7 @@ func main() {
 
 ### Retry With Data
 
-If the operation returns data along with an error, use `RetryWithData`. This function allows to obtain the result from the operation once it succeeds.
+For operations that return both data and an error, `RetryWithData` ensures that you can retrieve the data once the operation finally succeeds:
 
 ```go
 package main
