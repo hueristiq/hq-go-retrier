@@ -50,4 +50,4 @@ Assuming no existing issues exist, please [open a new issue](https://github.com/
 
 ### Create a Pull Requests
 
-Pull requests should target the `dev` branch. Please also reference the issue from the description of the pull request using [special keyword syntax](https://help.github.com/articles/closing-issues-via-commit-messages/) to auto close the issue when the PR is merged. For example, include the phrase `fixes #14` in the PR description to have issue #14 auto close.
+Pull requests should target the `dev` branch. Please also reference the issue from the description of the pull request using [special keyword syntax](https://help.github.com/articles/closing-issues-via-commit-messages/) to auto close the issue when the PR is merged. For example, include the phrase `fixes #14` in the PR description to have issue `#14` auto close.
