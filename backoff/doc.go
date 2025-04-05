@@ -14,7 +14,7 @@
 //	import (
 //	    "fmt"
 //	    "time"
-//	    "go.source.hueristiq.com/retrier/backoff"
+//	    "github.com/hueristiq/hq-go-retrier/backoff"
 //	)
 //
 //	func main() {

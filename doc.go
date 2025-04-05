@@ -12,18 +12,18 @@
 //	    "context"
 //	    "fmt"
 //	    "time"
-//	    "go.source.hueristiq.com/retrier"
-//	    "go.source.hueristiq.com/retrier/backoff"
+//	    hqgoretrier "github.com/hueristiq/hq-go-retrier"
+//	    "github.com/hueristiq/hq-go-retrier/backoff"
 //	)
 //
 //	func main() {
 //	    ctx := context.Background()
-//	    err := retrier.Retry(ctx, someOperation,
-//	        retrier.WithRetryMax(5),                                    // Allow a maximum of 5 retries.
-//	        retrier.WithRetryWaitMin(100 * time.Millisecond),           // Set the minimum delay to 100ms.
-//	        retrier.WithRetryWaitMax(2 * time.Second),                  // Set the maximum delay to 2 seconds.
-//	        retrier.WithRetryBackoff(backoff.ExponentialWithFullJitter()), // Use exponential backoff with full jitter.
-//	        retrier.WithNotifier(func(err error, backoff time.Duration) {
+//	    err := hqgoretrier.Retry(ctx, someOperation,
+//	        hqgoretrier.WithRetryMax(5),                                    // Allow a maximum of 5 retries.
+//	        hqgoretrier.WithRetryWaitMin(100 * time.Millisecond),           // Set the minimum delay to 100ms.
+//	        hqgoretrier.WithRetryWaitMax(2 * time.Second),                  // Set the maximum delay to 2 seconds.
+//	        hqgoretrier.WithRetryBackoff(backoff.ExponentialWithFullJitter()), // Use exponential backoff with full jitter.
+//	        hqgoretrier.WithNotifier(func(err error, backoff time.Duration) {
 //	            // Log the error and the delay before the next retry.
 //	            fmt.Printf("Retrying after error: %v, backoff: %v\n", err, backoff)
 //	        }),

@@ -1,4 +1,4 @@
-module go.source.hueristiq.com/retrier
+module github.com/hueristiq/hq-go-retrier
 
 go 1.24.2
 
