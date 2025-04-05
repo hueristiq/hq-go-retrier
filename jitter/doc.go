@@ -9,7 +9,7 @@
 //	import (
 //	    "fmt"
 //	    "time"
-//	    "go.source.hueristiq.com/retrier/jitter"
+//	    "github.com/hueristiq/hq-go-retrier/jitter"
 //	)
 //
 //	func main() {

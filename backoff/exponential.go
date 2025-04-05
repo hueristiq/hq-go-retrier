@@ -3,7 +3,7 @@ package backoff
 import (
 	"time"
 
-	"go.source.hueristiq.com/retrier/jitter"
+	"github.com/hueristiq/hq-go-retrier/jitter"
 )
 
 // Exponential returns a backoff function that implements basic exponential backoff.

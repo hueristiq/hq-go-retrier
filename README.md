@@ -27,7 +27,7 @@
 To install `hq-go-retrier`, run:
 
 ```bash
-go get -v -u go.source.hueristiq.com/retrier
+go get -v -u github.com/hueristiq/hq-go-retrier
 ```
 
 Make sure your Go environment is set up properly (Go 1.x or later is recommended).
@@ -46,8 +46,8 @@ import (
 	"fmt"
 	"time"
 
-	"go.source.hueristiq.com/retrier"
-	"go.source.hueristiq.com/retrier/backoff"
+	hqgoretrier "github.com/hueristiq/hq-go-retrier"
+	"github.com/hueristiq/hq-go-retrier/backoff"
 )
 
 func main() {
@@ -59,12 +59,12 @@ func main() {
 
 	defer cancel()
 
-	err := retrier.Retry(ctx, operation,
-		retrier.WithRetryMax(5),
-		retrier.WithRetryWaitMin(100*time.Millisecond),
-		retrier.WithRetryWaitMax(2*time.Second),
-		retrier.WithRetryBackoff(backoff.ExponentialWithFullJitter()),
-		retrier.WithNotifier(func(err error, b time.Duration) {
+	err := hqgoretrier.Retry(ctx, operation,
+		hqgoretrier.WithRetryMax(5),
+		hqgoretrier.WithRetryWaitMin(100*time.Millisecond),
+		hqgoretrier.WithRetryWaitMax(2*time.Second),
+		hqgoretrier.WithRetryBackoff(backoff.ExponentialWithFullJitter()),
+		hqgoretrier.WithNotifier(func(err error, b time.Duration) {
 			fmt.Printf("Retry due to error: %v. Next attempt in %v.\n", err, b)
 		}),
 	)
@@ -88,8 +88,8 @@ import (
 	"fmt"
 	"time"
 
-	"go.source.hueristiq.com/retrier"
-	"go.source.hueristiq.com/retrier/backoff"
+	hqgoretrier "github.com/hueristiq/hq-go-retrier"
+	"github.com/hueristiq/hq-go-retrier/backoff"
 )
 
 func fetchData() (string, error) {
@@ -101,12 +101,12 @@ func main() {
 
 	defer cancel()
 
-	result, err := retrier.RetryWithData(ctx, fetchData,
-		retrier.WithRetryMax(5),
-		retrier.WithRetryWaitMin(200*time.Millisecond),
-		retrier.WithRetryWaitMax(3*time.Second),
-		retrier.WithRetryBackoff(backoff.Exponential()),
-		retrier.WithNotifier(func(err error, b time.Duration) {
+	result, err := hqgoretrier.RetryWithData(ctx, fetchData,
+		hqgoretrier.WithRetryMax(5),
+		hqgoretrier.WithRetryWaitMin(200*time.Millisecond),
+		hqgoretrier.WithRetryWaitMax(3*time.Second),
+		hqgoretrier.WithRetryBackoff(backoff.Exponential()),
+		hqgoretrier.WithNotifier(func(err error, b time.Duration) {
 			fmt.Printf("Retrying after error: %v, waiting: %v\n", err, b)
 		}),
 	)

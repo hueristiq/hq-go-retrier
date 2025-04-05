@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hueristiq/hq-go-retrier/jitter"
 	"github.com/stretchr/testify/assert"
-	"go.source.hueristiq.com/retrier/jitter"
 )
 
 func TestEqualJitter(t *testing.T) {
