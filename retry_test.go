@@ -37,7 +37,7 @@ func TestRetry_SuccessAfterFailures(t *testing.T) {
 	t.Parallel()
 
 	mockOp := &mockOperation{failureCount: 2} // Fail twice, then succeed
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
 		retrier.WithRetryMax(5),
@@ -54,7 +54,7 @@ func TestRetry_MaxRetriesExceeded(t *testing.T) {
 	t.Parallel()
 
 	mockOp := &mockOperation{failureCount: 10} // Will fail more times than the allowed retries
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
 		retrier.WithRetryMax(3),
@@ -72,7 +72,7 @@ func TestRetryWithContext_Timeout(t *testing.T) {
 
 	mockOp := &mockOperation{failureCount: 10}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
 
 	defer cancel()
 
@@ -92,7 +92,7 @@ func TestRetryWithData_Success(t *testing.T) {
 	t.Parallel()
 
 	mockOp := &mockOperation{failureCount: 2}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	operationWithData := func() (int, error) {
 		if mockOp.callCount < 2 {
@@ -119,7 +119,7 @@ func TestRetryWithDecorrelatedJitter(t *testing.T) {
 	t.Parallel()
 
 	mockOp := &mockOperation{failureCount: 2}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
 		retrier.WithRetryMax(5),
@@ -136,7 +136,7 @@ func TestRetry_FullJitter(t *testing.T) {
 	t.Parallel()
 
 	mockOp := &mockOperation{failureCount: 2}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
 		retrier.WithRetryMax(5),
@@ -153,7 +153,7 @@ func TestRetry_EqualJitter(t *testing.T) {
 	t.Parallel()
 
 	mockOp := &mockOperation{failureCount: 2}
-	ctx := context.Background()
+	ctx := t.Context()
 
 	err := retrier.Retry(ctx, mockOp.Operation,
 		retrier.WithRetryMax(5),
@@ -171,7 +171,7 @@ func TestRetry_ContextCanceled(t *testing.T) {
 
 	mockOp := &mockOperation{failureCount: 2}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	cancel()
 
