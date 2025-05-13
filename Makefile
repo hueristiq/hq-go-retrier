@@ -4,9 +4,9 @@ SHELL = /bin/sh
 # --- Setup ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-.PHONY: git-hooks-manager
+.PHONY: install-lefthook
 
-git-hooks-manager:
+install-lefthook:
 	(command -v lefthook || go install github.com/evilmartians/lefthook@latest) && lefthook install
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ help:
 	@echo ""
 	@echo " Setup:"
 	@echo ""
-	@echo "  git-hooks-manager ............. Install Git hooks manager (lefthook)."
+	@echo "  install-lefthook .............. Install lefthook (Git hooks manager)."
 	@echo ""
 	@echo " Go (Golang):"
 	@echo ""
