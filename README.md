@@ -16,8 +16,7 @@
 
 ## Features
 
-- **Configurable Retry Mechanism:** Supports number of retries, as well as the delay between retries configuration.
-- **Flexible Backoff Strategies:** Supports various backoffs strategies to dynamically increase the wait time between retries.
+- **Configurable Retry Mechanism:** Supports number of retries, and flexible backoff strategies.
 - **Context Support:** Supports Go's `context`, enabling graceful cancellation and timeout management.
 - **Data Handling:** In addition to simple error retries, it supports operations that return data once they succeeds.
 - **Notifier Callback:** Supports defination of a notifier callback to receive real-time notifications on each retry attempt.
