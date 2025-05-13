@@ -45,7 +45,7 @@ help:
 	@echo ""
 	@echo " Setup:"
 	@echo ""
-	@echo "  install-lefthook .............. Install lefthook (Git hooks manager)."
+	@echo "  install-lefthook ............... Install lefthook (Git hooks manager)."
 	@echo ""
 	@echo " Go (Golang):"
 	@echo ""
