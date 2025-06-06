@@ -1,19 +1,22 @@
 package backoff
 
 import (
+	"math"
 	"time"
 
 	"github.com/hueristiq/hq-go-retrier/jitter"
 )
 
-// Exponential returns a backoff function that implements basic exponential backoff.
-// In this strategy, the delay increases exponentially with each retry attempt.
-// The delay is calculated using the formula:
+// Exponential returns a Backoff function that implements a basic exponential backoff strategy.
 //
-//	delay = minDelay * 2^(attempt)
+// This strategy calculates the delay by exponentially increasing the base delay (minDelay) based on
+// the retry attempt number, using the formula:
 //
-// The calculated delay is then capped by maxDelay, ensuring that the delay never exceeds
-// a specified maximum.
+//	delay = minDelay * 2^attempt
+//
+// If minDelay or maxDelay is less than or equal to 0, or if attempt is negative, the function
+// returns a zero duration. For attempt < 1, it returns minDelay (no exponential increase).
+// The delay is capped at maxDelay to ensure reasonable retry intervals.
 //
 // Parameters:
 //   - minDelay (time.Duration): The base (minimum) delay duration.
@@ -21,17 +24,30 @@ import (
 //   - attempt (int): The current retry attempt number (typically starting at 0 or 1).
 //
 // Returns:
-//   - backoff (time.Duration): The computed delay duration to wait before the next retry.
-//
-// Example:
-//
-//	backoffFunc := Exponential()
-//	delay := backoffFunc(1*time.Second, 30*time.Second, 3)
-//	// For attempt 3, the base delay is calculated as 1s * 2^3 = 8 seconds,
-//	// but if the calculated delay exceeds maxDelay, it is capped at maxDelay.
-func Exponential() func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
+//   - backoff (Backoff): A function that computes the exponential backoff delay, capped at maxDelay.
+func Exponential() Backoff {
 	return func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
-		backoff = minDelay << attempt
+		backoff = 0
+
+		if minDelay <= 0 || maxDelay <= 0 || attempt < 0 {
+			return
+		}
+
+		backoff = minDelay
+
+		if maxDelay > minDelay && attempt < 1 {
+			return
+		}
+
+		for range attempt {
+			if backoff > math.MaxInt64/2 {
+				backoff = maxDelay
+
+				return
+			}
+
+			backoff *= 2
+		}
 
 		if backoff > maxDelay {
 			backoff = maxDelay
@@ -41,32 +57,49 @@ func Exponential() func(minDelay, maxDelay time.Duration, attempt int) (backoff 
 	}
 }
 
-// ExponentialWithEqualJitter returns a backoff function that implements exponential backoff with equal jitter.
-// In this strategy, the delay is first calculated exponentially and then a random jitter value is added.
-// The jitter is computed using an "equal" jitter function, which typically adds a random value around the midpoint
-// of the calculated delay. The formula can be described as:
+// ExponentialWithEqualJitter returns a Backoff function that implements exponential backoff with
+// equal jitter to add moderate randomness to retry delays.
 //
-//	delay = (minDelay * 2^(attempt)) + jitter.Equal(delay)
+// The delay is calculated as minDelay * 2^attempt, then augmented with equal jitter from the jitter.Equal
+// function, which adds a random duration in the range [delay/2, delay]. The formula is:
 //
-// As with basic exponential backoff, the final delay is capped at maxDelay.
+//	delay = (minDelay * 2^attempt) + jitter.Equal(delay)
+//
+// The final delay is capped at maxDelay. If minDelay or maxDelay is less than or equal to 0, or if
+// attempt is negative, the function returns a zero duration. For attempt < 1, it returns minDelay
+// plus equal jitter.
 //
 // Parameters:
-//   - minDelay (time.Duration): The base delay duration.
+//   - minDelay (time.Duration): The base (minimum) delay duration.
 //   - maxDelay (time.Duration): The maximum allowable delay duration.
-//   - attempt (int): The current retry attempt number.
+//   - attempt (int): The current retry attempt number (typically starting at 0 or 1).
 //
 // Returns:
-//   - backoff (time.Duration): The computed delay with equal jitter applied.
-//
-// Example:
-//
-//	backoffFunc := ExponentialWithEqualJitter()
-//	delay := backoffFunc(1*time.Second, 30*time.Second, 3)
-//	// The base delay is 8 seconds (1s * 2^3); jitter.Equal adds a moderate random delay,
-//	// and the total is capped at 30 seconds if necessary.
-func ExponentialWithEqualJitter() func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
+//   - backoff (Backoff): A function that computes the exponential backoff delay with equal jitter,
+//     capped at maxDelay.
+func ExponentialWithEqualJitter() Backoff {
 	return func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
-		backoff = minDelay << attempt
+		backoff = 0
+
+		if minDelay <= 0 || maxDelay <= 0 || attempt < 0 {
+			return
+		}
+
+		backoff = minDelay
+
+		if maxDelay > minDelay && attempt < 1 {
+			return
+		}
+
+		for range attempt {
+			if backoff > math.MaxInt64/2 {
+				backoff = maxDelay
+
+				return
+			}
+
+			backoff *= 2
+		}
 
 		backoff += jitter.Equal(backoff)
 
@@ -78,32 +111,49 @@ func ExponentialWithEqualJitter() func(minDelay, maxDelay time.Duration, attempt
 	}
 }
 
-// ExponentialWithFullJitter returns a backoff function that implements exponential backoff with full jitter.
-// In this strategy, after calculating the exponential delay, a random jitter is applied such that the additional
-// delay is uniformly distributed between 0 and the computed delay. The formula is:
+// ExponentialWithFullJitter returns a Backoff function that implements exponential backoff with
+// full jitter to add maximum randomness to retry delays.
 //
-//	delay = (minDelay * 2^(attempt)) + jitter.Full(delay)
+// The delay is calculated as minDelay * 2^attempt, then augmented with full jitter from the jitter.Full
+// function, which adds a random duration in the range [0, delay]. The formula is:
 //
-// This full jitter approach often results in a more randomized delay to help avoid the "thundering herd" effect,
-// and the final delay is capped at maxDelay.
+//	delay = (minDelay * 2^attempt) + jitter.Full(delay)
+//
+// The final delay is capped at maxDelay. If minDelay or maxDelay is less than or equal to 0, or if
+// attempt is negative, the function returns a zero duration. For attempt < 1, it returns minDelay
+// plus full jitter.
 //
 // Parameters:
-//   - minDelay (time.Duration): The base delay duration.
+//   - minDelay (time.Duration): The base (minimum) delay duration.
 //   - maxDelay (time.Duration): The maximum allowable delay duration.
-//   - attempt (int): The current retry attempt number.
+//   - attempt (int): The current retry attempt number (typically starting at 0 or 1).
 //
 // Returns:
-//   - backoff (time.Duration): The computed delay with full jitter applied.
-//
-// Example:
-//
-//	backoffFunc := ExponentialWithFullJitter()
-//	delay := backoffFunc(1*time.Second, 30*time.Second, 3)
-//	// The base delay is calculated as 8 seconds (1s * 2^3), then a random value between 0 and 8 seconds is added,
-//	// and the result is capped at 30 seconds.
-func ExponentialWithFullJitter() func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
+//   - backoff (Backoff): A function that computes the exponential backoff delay with full jitter,
+//     capped at maxDelay.
+func ExponentialWithFullJitter() Backoff {
 	return func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
-		backoff = minDelay << attempt
+		backoff = 0
+
+		if minDelay <= 0 || maxDelay <= 0 || attempt < 0 {
+			return
+		}
+
+		backoff = minDelay
+
+		if maxDelay > minDelay && attempt < 1 {
+			return
+		}
+
+		for range attempt {
+			if backoff > math.MaxInt64/2 {
+				backoff = maxDelay
+
+				return
+			}
+
+			backoff *= 2
+		}
 
 		backoff += jitter.Full(backoff)
 
@@ -115,47 +165,65 @@ func ExponentialWithFullJitter() func(minDelay, maxDelay time.Duration, attempt 
 	}
 }
 
-// ExponentialWithDecorrelatedJitter returns a backoff function that implements exponential backoff with decorrelated jitter.
-// This strategy not only increases the delay exponentially, but also introduces jitter in a way that reduces correlation
-// between successive retries. It takes into account the previous backoff duration when computing the jitter.
-// The general idea is:
+// ExponentialWithDecorrelatedJitter returns a Backoff function that implements exponential backoff
+// with decorrelated jitter, reducing correlation between successive retry delays.
 //
-//	delay = (minDelay * 2^(attempt)) + jitter.Decorrelated(minDelay, maxDelay, previous)
+// The delay is calculated as minDelay * 2^attempt, then augmented with decorrelated jitter from the
+// jitter.Decorrelated function, which computes a random duration in the range [minDelay, previous * 3],
+// where previous is the delay of the previous attempt (minDelay * 2^(attempt-1)) or minDelay for
+// attempt = 0. The formula is:
 //
-// where 'previous' is the backoff value from the previous attempt (or minDelay if no previous attempt exists).
-// If the provided attempt is less than 0, the function returns minDelay.
+//	delay = (minDelay * 2^attempt) + jitter.Decorrelated(minDelay, maxDelay, previous)
 //
-// The final computed delay is capped by maxDelay.
+// The final delay is capped at maxDelay. If minDelay or maxDelay is less than or equal to 0, or if
+// attempt is negative, the function returns a zero duration. For attempt < 1, it returns minDelay
+// plus decorrelated jitter.
 //
 // Parameters:
-//   - minDelay (time.Duration): The base delay duration.
+//   - minDelay (time.Duration): The base (minimum) delay duration.
 //   - maxDelay (time.Duration): The maximum allowable delay duration.
-//   - attempt (int): The current retry attempt number.
-//   - If attempt < 0, the function returns minDelay immediately.
-//   - For attempt > 0, the previous delay is computed as minDelay * 2^(attempt - 1).
+//   - attempt (int): The current retry attempt number (typically starting at 0 or 1).
 //
 // Returns:
-//   - delay (time.Duration): The computed delay with decorrelated jitter applied.
-//
-// Example:
-//
-//	backoffFunc := ExponentialWithDecorrelatedJitter()
-//	delay := backoffFunc(1*time.Second, 30*time.Second, 3)
-//	// The delay is calculated with exponential growth, plus decorrelated jitter based on the previous delay,
-//	// and is capped at 30 seconds.
-func ExponentialWithDecorrelatedJitter() func(minDelay, maxDelay time.Duration, attempt int) (delay time.Duration) {
+//   - backoff (Backoff): A function that computes the exponential backoff delay with decorrelated
+//     jitter, capped at maxDelay.
+func ExponentialWithDecorrelatedJitter() Backoff {
 	return func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration) {
-		if attempt < 0 {
-			return minDelay
+		backoff = 0
+
+		if minDelay <= 0 || maxDelay <= 0 || attempt < 0 {
+			return
+		}
+
+		backoff = minDelay
+
+		if maxDelay > minDelay && attempt < 1 {
+			return
+		}
+
+		for range attempt {
+			if backoff > math.MaxInt64/2 {
+				backoff = maxDelay
+
+				return
+			}
+
+			backoff *= 2
 		}
 
 		previous := minDelay
 
 		if attempt > 0 {
-			previous = minDelay << (attempt - 1)
-		}
+			for range attempt - 1 {
+				if previous > math.MaxInt64/2 {
+					previous = maxDelay
 
-		backoff = minDelay << attempt
+					break
+				}
+
+				previous *= 2
+			}
+		}
 
 		backoff += jitter.Decorrelated(minDelay, maxDelay, previous)
 
