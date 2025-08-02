@@ -4,10 +4,10 @@ Contributions are welcome and encouraged!
 
 Whether you’re fixing a bug, adding a new feature, improving documentation, or proposing changes to these guidelines, your efforts help improve the project for everyone. Please review the following guidelines before contributing. If you have suggestions to improve these guidelines, feel free to update this file and submit a pull request.
 
-* [I have a question...](#have-a-question)
-* [I found a bug...](#found-a-bug)
-* [I have a feature request...](#have-a-feature-request)
-* [I have a contribution to share...](#ready-to-contribute)
+- [I have a question...](#have-a-question)
+- [I found a bug...](#found-a-bug)
+- [I have a feature request...](#have-a-feature-request)
+- [I have a contribution to share...](#ready-to-contribute)
 
 ## Have a Question?
 
