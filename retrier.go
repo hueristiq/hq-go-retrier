@@ -7,7 +7,7 @@ import (
 	"github.com/hueristiq/hq-go-retrier/backoff"
 )
 
-// configuration holds the settings for retry operations, defining the behavior of the retry
+// options holds the settings for retry operations, defining the behavior of the retry
 // mechanism.
 //
 // Fields:
@@ -20,7 +20,7 @@ import (
 //     the current attempt number, retryWaitMin, and retryWaitMax.
 //   - notifier (Notifier): A callback function invoked on each retry attempt, receiving the error
 //     that triggered the retry and the computed backoff duration.
-type configuration struct {
+type options struct {
 	retryMax     int
 	retryWaitMin time.Duration
 	retryWaitMax time.Duration
@@ -39,15 +39,15 @@ type configuration struct {
 //   - backoff (time.Duration): The computed delay duration before the next retry attempt.
 type Notifier func(err error, backoff time.Duration)
 
-// Option is a function type used to modify the retry configuration in a declarative manner.
+// OptionFunc is a function type used to modify the retry options in a declarative manner.
 //
-// It allows users to customize retry behavior by setting fields in the configuration struct,
+// It allows users to customize retry behavior by setting fields in the options struct,
 // such as the maximum number of retries, delay bounds, backoff strategy, or notifier callback.
 // Multiple options can be combined to create a tailored retry policy.
 //
 // Parameters:
-//   - configuration (*configuration): A pointer to the configuration struct to be modified.
-type Option func(configuration *configuration)
+//   - opts (*options): A pointer to the options struct to be modified.
+type OptionFunc func(opts *options)
 
 // Operation is a function type representing an operation that may be retried.
 //
@@ -89,7 +89,7 @@ func (o Operation) withEmptyData() (operationWithData OperationWithData[struct{}
 //   - err (error): The error from the operation, or nil if the operation succeeded.
 type OperationWithData[T any] func() (data T, err error)
 
-// WithRetryMax returns an Option that sets the maximum number of retry attempts.
+// WithRetryMax returns an OptionFunc that sets the maximum number of retry attempts.
 //
 // It configures the retrier to limit retries to the specified number. Once this limit is reached,
 // the retrier stops and returns the last error. A value of 0 means no retries are attempted
@@ -100,14 +100,14 @@ type OperationWithData[T any] func() (data T, err error)
 //     values may lead to undefined behavior.
 //
 // Returns:
-//   - option (Option): A functional option that sets the retryMax field in the configuration.
-func WithRetryMax(retryMax int) (option Option) {
-	return func(configuration *configuration) {
-		configuration.retryMax = retryMax
+//   - (OptionFunc): A functional option that sets the retryMax field in the options.
+func WithRetryMax(retryMax int) OptionFunc {
+	return func(opts *options) {
+		opts.retryMax = retryMax
 	}
 }
 
-// WithRetryWaitMin returns an Option that sets the minimum delay between retry attempts.
+// WithRetryWaitMin returns an OptionFunc that sets the minimum delay between retry attempts.
 //
 // It defines the base delay for backoff calculations, ensuring retries do not occur too rapidly.
 // This is particularly important for preventing overwhelming a system with rapid retries.
@@ -117,14 +117,14 @@ func WithRetryMax(retryMax int) (option Option) {
 //     values may lead to undefined behavior.
 //
 // Returns:
-//   - option (Option): A functional option that sets the retryWaitMin field in the configuration.
-func WithRetryWaitMin(retryWaitMin time.Duration) (option Option) {
-	return func(configuration *configuration) {
-		configuration.retryWaitMin = retryWaitMin
+//   - (OptionFunc): A functional option that sets the retryWaitMin field in the options.
+func WithRetryWaitMin(retryWaitMin time.Duration) OptionFunc {
+	return func(opts *options) {
+		opts.retryWaitMin = retryWaitMin
 	}
 }
 
-// WithRetryWaitMax returns an Option that sets the maximum delay between retry attempts.
+// WithRetryWaitMax returns an OptionFunc that sets the maximum delay between retry attempts.
 //
 // It caps the backoff duration to prevent excessively long delays, ensuring retries occur within
 // a reasonable timeframe. Typically, retryWaitMax should be greater than or equal to retryWaitMin.
@@ -134,14 +134,14 @@ func WithRetryWaitMin(retryWaitMin time.Duration) (option Option) {
 //     values may lead to undefined behavior.
 //
 // Returns:
-//   - option (Option): A functional option that sets the retryWaitMax field in the configuration.
-func WithRetryWaitMax(retryWaitMax time.Duration) (option Option) {
-	return func(configuration *configuration) {
-		configuration.retryWaitMax = retryWaitMax
+//   - (OptionFunc): A functional option that sets the retryWaitMax field in the options.
+func WithRetryWaitMax(retryWaitMax time.Duration) OptionFunc {
+	return func(opts *options) {
+		opts.retryWaitMax = retryWaitMax
 	}
 }
 
-// WithRetryBackoff returns an Option that sets the backoff strategy for computing retry delays.
+// WithRetryBackoff returns an OptionFunc that sets the backoff strategy for computing retry delays.
 //
 // It allows users to specify a custom backoff strategy (from the backoff package) to calculate
 // delays based on the attempt number, minimum delay, and maximum delay. This enables flexible
@@ -152,14 +152,14 @@ func WithRetryWaitMax(retryWaitMax time.Duration) (option Option) {
 //     use a default strategy (e.g., exponential backoff).
 //
 // Returns:
-//   - option (Option): A functional option that sets the retryBackoff field in the configuration.
-func WithRetryBackoff(retryBackoff backoff.Backoff) (option Option) {
-	return func(configuration *configuration) {
-		configuration.retryBackoff = retryBackoff
+//   - (OptionFunc): A functional option that sets the retryBackoff field in the options.
+func WithRetryBackoff(retryBackoff backoff.Backoff) OptionFunc {
+	return func(opts *options) {
+		opts.retryBackoff = retryBackoff
 	}
 }
 
-// WithNotifier returns an Option that sets a notifier callback for retry attempts.
+// WithNotifier returns an OptionFunc that sets a notifier callback for retry attempts.
 //
 // It configures a callback function that is invoked after each failed retry attempt, receiving
 // the error and the computed backoff duration. This is useful for logging, monitoring, or other
@@ -170,16 +170,16 @@ func WithRetryBackoff(retryBackoff backoff.Backoff) (option Option) {
 //     notification is performed.
 //
 // Returns:
-//   - option (Option): A functional option that sets the notifier field in the configuration.
-func WithNotifier(notifier Notifier) (option Option) {
-	return func(configuration *configuration) {
-		configuration.notifier = notifier
+//   - (OptionFunc): A functional option that sets the notifier field in the options.
+func WithNotifier(notifier Notifier) OptionFunc {
+	return func(opts *options) {
+		opts.notifier = notifier
 	}
 }
 
-// Retry executes an operation with retries, respecting the provided context and configuration.
+// Retry executes an operation with retries, respecting the provided context and options.
 //
-// It attempts the operation up to retryMax times (as specified in the configuration), waiting
+// It attempts the operation up to retryMax times (as specified in the options), waiting
 // between attempts according to the backoff strategy. If the operation succeeds (returns nil
 // error), it returns immediately. If the context is canceled or times out, it returns the
 // context's error. If all retries fail, it returns the last error from the operation.
@@ -189,14 +189,14 @@ func WithNotifier(notifier Notifier) (option Option) {
 //     aborts retries and returns ctx.Err().
 //   - operation (Operation): The operation to retry, which returns an error indicating success
 //     or failure.
-//   - options (...Option): Variadic configuration options to customize retry behavior, such as
+//   - ofs (...OptionFunc): Variadic options options to customize retry behavior, such as
 //     maximum retries, delay bounds, backoff strategy, and notifier.
 //
 // Returns:
 //   - err (error): The error from the last attempt if all retries fail, or ctx.Err() if the
 //     context is canceled or times out. Returns nil if the operation succeeds.
-func Retry(ctx context.Context, operation Operation, options ...Option) (err error) {
-	_, err = RetryWithData(ctx, operation.withEmptyData(), options...)
+func Retry(ctx context.Context, operation Operation, ofs ...OptionFunc) (err error) {
+	_, err = RetryWithData(ctx, operation.withEmptyData(), ofs...)
 
 	return
 }
@@ -213,22 +213,22 @@ func Retry(ctx context.Context, operation Operation, options ...Option) (err err
 //     aborts retries and returns ctx.Err().
 //   - operation (OperationWithData[T]): The operation to retry, returning a result of type T
 //     and an error.
-//   - options (...Option): Variadic configuration options to customize retry behavior.
+//   - ofs (...OptionFunc): Variadic options options to customize retry behavior.
 //
 // Returns:
 //   - result (T): The result from the operation if it succeeds, or the last result if all retries fail.
 //   - err (error): The error from the last attempt if all retries fail, or ctx.Err() if the
 //     context is canceled or times out. Returns nil if the operation succeeds.
-func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], options ...Option) (result T, err error) {
-	cfg := &configuration{
+func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], ofs ...OptionFunc) (result T, err error) {
+	opts := &options{
 		retryMax:     3,
 		retryWaitMin: 1 * time.Second,
 		retryWaitMax: 30 * time.Second,
 		retryBackoff: backoff.ExponentialWithDecorrelatedJitter(),
 	}
 
-	for _, option := range options {
-		option(cfg)
+	for _, f := range ofs {
+		f(opts)
 	}
 
 	for attempt := 1; ; attempt++ {
@@ -243,14 +243,14 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 				return
 			}
 
-			if cfg.retryMax > 0 && attempt >= cfg.retryMax {
+			if opts.retryMax > 0 && attempt >= opts.retryMax {
 				return
 			}
 
-			b := cfg.retryBackoff(cfg.retryWaitMin, cfg.retryWaitMax, attempt)
+			b := opts.retryBackoff(opts.retryWaitMin, opts.retryWaitMax, attempt)
 
-			if cfg.notifier != nil {
-				cfg.notifier(err, b)
+			if opts.notifier != nil {
+				opts.notifier(err, b)
 			}
 
 			ticker := time.NewTicker(b)
