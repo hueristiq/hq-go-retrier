@@ -103,7 +103,8 @@ linters:
         - wastedassign
         - whitespace
         - wrapcheck
-        - wsl
+        # - wsl
+        - wsl_v5
         - zerologlint
 
     settings:
