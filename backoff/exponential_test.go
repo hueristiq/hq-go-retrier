@@ -1,11 +1,10 @@
-package backoff_test
+package backoff
 
 import (
 	"math"
 	"testing"
 	"time"
 
-	"github.com/hueristiq/hq-lib-retrier-go/backoff"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -93,7 +92,7 @@ func TestExponentialBackoff(t *testing.T) {
 			},
 		}
 
-		b := backoff.Exponential()
+		b := Exponential()
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -159,7 +158,7 @@ func TestExponentialBackoff(t *testing.T) {
 			},
 		}
 
-		b := backoff.Exponential()
+		b := Exponential()
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -177,7 +176,7 @@ func TestExponentialBackoff(t *testing.T) {
 
 		minDelay := time.Duration(math.MaxInt64 / 2)
 		maxDelay := time.Duration(math.MaxInt64)
-		b := backoff.Exponential()
+		b := Exponential()
 
 		delay := b(minDelay, maxDelay, 2)
 
@@ -192,7 +191,7 @@ func expBase(minDelay, maxDelay time.Duration, attempt int) time.Duration {
 func TestExponentialDeterminism(t *testing.T) {
 	t.Parallel()
 
-	b := backoff.Exponential()
+	b := Exponential()
 	want := b(time.Millisecond, time.Second, 4)
 
 	for range 20 {
@@ -207,11 +206,11 @@ func TestExponentialJitterVaries(t *testing.T) {
 
 	strategies := []struct {
 		name string
-		b    backoff.Backoff
+		b    Backoff
 	}{
-		{"equal jitter", backoff.ExponentialWithEqualJitter()},
-		{"full jitter", backoff.ExponentialWithFullJitter()},
-		{"decorrelated jitter", backoff.ExponentialWithDecorrelatedJitter()},
+		{"equal jitter", ExponentialWithEqualJitter()},
+		{"full jitter", ExponentialWithFullJitter()},
+		{"decorrelated jitter", ExponentialWithDecorrelatedJitter()},
 	}
 
 	for _, s := range strategies {
@@ -252,7 +251,7 @@ func TestExponentialWithEqualJitterBackoff(t *testing.T) {
 			{"attempt 10 (capped)", time.Millisecond, 2 * time.Second, 10},
 		}
 
-		b := backoff.ExponentialWithEqualJitter()
+		b := ExponentialWithEqualJitter()
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -288,7 +287,7 @@ func TestExponentialWithEqualJitterBackoff(t *testing.T) {
 			{"zero attempt", time.Millisecond, time.Second, 0, false},
 		}
 
-		b := backoff.ExponentialWithEqualJitter()
+		b := ExponentialWithEqualJitter()
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -313,7 +312,7 @@ func TestExponentialWithEqualJitterBackoff(t *testing.T) {
 
 		minDelay := time.Duration(math.MaxInt64 / 2)
 		maxDelay := time.Duration(math.MaxInt64)
-		b := backoff.ExponentialWithEqualJitter()
+		b := ExponentialWithEqualJitter()
 
 		delay := b(minDelay, maxDelay, 2)
 
@@ -345,7 +344,7 @@ func TestExponentialWithFullJitterBackoff(t *testing.T) {
 			{"attempt 10 (capped)", time.Millisecond, time.Second, 10},
 		}
 
-		b := backoff.ExponentialWithFullJitter()
+		b := ExponentialWithFullJitter()
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -381,7 +380,7 @@ func TestExponentialWithFullJitterBackoff(t *testing.T) {
 			{"zero attempt", time.Millisecond, time.Second, 0, false},
 		}
 
-		b := backoff.ExponentialWithFullJitter()
+		b := ExponentialWithFullJitter()
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -406,7 +405,7 @@ func TestExponentialWithFullJitterBackoff(t *testing.T) {
 
 		minDelay := time.Duration(math.MaxInt64 / 2)
 		maxDelay := time.Duration(math.MaxInt64)
-		b := backoff.ExponentialWithFullJitter()
+		b := ExponentialWithFullJitter()
 
 		delay := b(minDelay, maxDelay, 2)
 
@@ -438,7 +437,7 @@ func TestExponentialWithDecorrelatedJitterBackoff(t *testing.T) {
 			{"attempt 10 (capped)", time.Millisecond, time.Second, 10},
 		}
 
-		b := backoff.ExponentialWithDecorrelatedJitter()
+		b := ExponentialWithDecorrelatedJitter()
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -471,7 +470,7 @@ func TestExponentialWithDecorrelatedJitterBackoff(t *testing.T) {
 			{"zero attempt", time.Millisecond, time.Second, 0, false},
 		}
 
-		b := backoff.ExponentialWithDecorrelatedJitter()
+		b := ExponentialWithDecorrelatedJitter()
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -496,7 +495,7 @@ func TestExponentialWithDecorrelatedJitterBackoff(t *testing.T) {
 
 		minDelay := time.Duration(math.MaxInt64 / 2)
 		maxDelay := time.Duration(math.MaxInt64)
-		b := backoff.ExponentialWithDecorrelatedJitter()
+		b := ExponentialWithDecorrelatedJitter()
 
 		delay := b(minDelay, maxDelay, 2)
 
