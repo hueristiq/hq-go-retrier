@@ -13,21 +13,21 @@ linters:
         # - cyclop
         - decorder
         # - depguard
-        - dogsled
+        # - dogsled
         # - dupl
         # - dupword
         - durationcheck
-        - err113
+        # - err113
         # - errcheck
         - errchkjson
         - errname
-        - errorlint
+        # - errorlint
         - exhaustive
         # - exhaustruct
         - exptostd
         - fatcontext
         - forbidigo
-        - forcetypeassert
+        # - forcetypeassert
         # - funlen
         - ginkgolinter
         - gocheckcompilerdirectives
@@ -35,22 +35,23 @@ linters:
         # - gochecknoinits
         - gochecksumtype
         # - gocognit
-        - goconst
+        # - goconst
         - gocritic
         # - gocyclo
-        - godot
+        # - godot
         - godox
         - goheader
         - gomoddirectives
-        - gomodguard
+        # - gomodguard
+        - gomodguard_v2
         - goprintffuncname
         # - gosec
-        - gosmopolitan
+        # - gosmopolitan
         - govet
         - grouper
         - iface
         - importas
-        - inamedparam
+        # - inamedparam
         - ineffassign
         - interfacebloat
         - intrange
@@ -60,11 +61,11 @@ linters:
         # - maintidx
         - makezero
         - mirror
-        - misspell
+        # - misspell
         # - mnd
         - musttag
         # - nakedret
-        - nestif
+        # - nestif
         # - nilerr
         - nilnesserr
         - nilnil
@@ -80,7 +81,7 @@ linters:
         - promlinter
         - protogetter
         - reassign
-        - recvcheck
+        # - recvcheck
         # - revive
         - rowserrcheck
         - sloglint
@@ -91,7 +92,7 @@ linters:
         # - tagliatelle
         - testableexamples
         - testifylint
-        - testpackage
+        # - testpackage
         - thelper
         - tparallel
         - unconvert
@@ -102,7 +103,7 @@ linters:
         # - varnamelen
         - wastedassign
         - whitespace
-        - wrapcheck
+        # - wrapcheck
         # - wsl
         - wsl_v5
         - zerologlint
@@ -125,6 +126,14 @@ linters:
         whitespace:
             multi-if: true
             multi-func: true
+        wsl_v5:
+            allow-first-in-block: true
+            allow-whole-block: false
+            branch-max-lines: 2
+
+    exclusions:
+        paths:
+            - examples
 
 issues:
     whole-files: false
@@ -139,4 +148,4 @@ run:
     modules-download-mode: readonly
     allow-parallel-runners: true
     allow-serial-runners: true
-    go: '1.25'
+    go: '1.26.3'

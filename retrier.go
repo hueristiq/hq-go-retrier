@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/hueristiq/hq-go-retrier/backoff"
+	"github.com/hueristiq/hq-lib-retrier-go/backoff"
 )
 
 // options holds the settings for retry operations, defining the behavior of the retry
@@ -89,15 +89,16 @@ func (o Operation) withEmptyData() (operationWithData OperationWithData[struct{}
 //   - err (error): The error from the operation, or nil if the operation succeeded.
 type OperationWithData[T any] func() (data T, err error)
 
-// WithRetryMax returns an OptionFunc that sets the maximum number of retry attempts.
+// WithRetryMax returns an OptionFunc that sets the maximum number of attempts.
 //
-// It configures the retrier to limit retries to the specified number. Once this limit is reached,
-// the retrier stops and returns the last error. A value of 0 means no retries are attempted
-// (only the initial attempt is made).
+// The count includes the initial attempt, so a value of 3 means one initial call followed by up to
+// two retries. Once the limit is reached, the retrier stops and returns the last error. A value
+// less than or equal to 0 means the operation is retried indefinitely until it succeeds or the
+// context is canceled.
 //
 // Parameters:
-//   - retryMax (int): The maximum number of retry attempts. Should be non-negative; negative
-//     values may lead to undefined behavior.
+//   - retryMax (int): The maximum number of attempts, including the initial one. Values less than
+//     or equal to 0 enable unlimited retries.
 //
 // Returns:
 //   - (OptionFunc): A functional option that sets the retryMax field in the options.
@@ -189,8 +190,8 @@ func WithNotifier(notifier Notifier) OptionFunc {
 //     aborts retries and returns ctx.Err().
 //   - operation (Operation): The operation to retry, which returns an error indicating success
 //     or failure.
-//   - ofs (...OptionFunc): Variadic options options to customize retry behavior, such as
-//     maximum retries, delay bounds, backoff strategy, and notifier.
+//   - ofs (...OptionFunc): Variadic functional options to customize retry behavior, such as
+//     maximum attempts, delay bounds, backoff strategy, and notifier.
 //
 // Returns:
 //   - err (error): The error from the last attempt if all retries fail, or ctx.Err() if the
@@ -213,7 +214,7 @@ func Retry(ctx context.Context, operation Operation, ofs ...OptionFunc) (err err
 //     aborts retries and returns ctx.Err().
 //   - operation (OperationWithData[T]): The operation to retry, returning a result of type T
 //     and an error.
-//   - ofs (...OptionFunc): Variadic options options to customize retry behavior.
+//   - ofs (...OptionFunc): Variadic functional options to customize retry behavior.
 //
 // Returns:
 //   - result (T): The result from the operation if it succeeds, or the last result if all retries fail.
@@ -234,7 +235,7 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 	for attempt := 1; ; attempt++ {
 		select {
 		case <-ctx.Done():
-			err = ctx.Err()
+			err = context.Cause(ctx)
 
 			return
 		default:
@@ -253,13 +254,12 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 				opts.notifier(err, b)
 			}
 
-			ticker := time.NewTicker(b)
+			timer := time.NewTimer(b)
 
 			select {
-			case <-ticker.C:
-				ticker.Stop()
+			case <-timer.C:
 			case <-ctx.Done():
-				ticker.Stop()
+				timer.Stop()
 
 				err = context.Cause(ctx)
 

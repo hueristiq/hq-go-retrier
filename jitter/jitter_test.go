@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hueristiq/hq-go-retrier/jitter"
+	"github.com/hueristiq/hq-lib-retrier-go/jitter"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -122,6 +122,32 @@ func TestDecorrelatedJitter(t *testing.T) {
 		assert.LessOrEqual(t, jittered, maxDelay, "Jittered duration should not exceed the maximum")
 	})
 
+	t.Run("negative previous defaults to minDelay", func(t *testing.T) {
+		t.Parallel()
+
+		minDelay := 2 * time.Second
+		maxDelay := 10 * time.Second
+
+		for range 100 {
+			jittered := jitter.Decorrelated(minDelay, maxDelay, -5*time.Second)
+
+			assert.GreaterOrEqual(t, jittered, minDelay, "Jittered duration should be at least the minimum")
+			assert.LessOrEqual(t, jittered, maxDelay, "Jittered duration should not exceed the maximum")
+		}
+	})
+
+	t.Run("previous smaller than minDelay clamps to minDelay", func(t *testing.T) {
+		t.Parallel()
+
+		minDelay := 5 * time.Second
+		maxDelay := 10 * time.Second
+		previous := 1 * time.Second
+
+		jittered := jitter.Decorrelated(minDelay, maxDelay, previous)
+
+		assert.Equal(t, minDelay, jittered, "Jittered duration should clamp to minDelay")
+	})
+
 	t.Run("subsequent calls", func(t *testing.T) {
 		t.Parallel()
 
@@ -145,7 +171,6 @@ func TestDecorrelatedJitter(t *testing.T) {
 		maxDelay := 10 * time.Second
 		previous := 5 * time.Second
 
-		// Run multiple times to catch potential boundary issues
 		for range 100 {
 			jittered := jitter.Decorrelated(minDelay, maxDelay, previous)
 
@@ -159,10 +184,55 @@ func TestDecorrelatedJitter(t *testing.T) {
 
 		minDelay := 1 * time.Second
 		maxDelay := 10 * time.Second
-		previous := time.Duration(1<<63 - 1) // Max possible duration
+		previous := time.Duration(1<<63 - 1)
 
 		jittered := jitter.Decorrelated(minDelay, maxDelay, previous)
 
-		assert.Equal(t, maxDelay, jittered)
+		assert.GreaterOrEqual(t, jittered, minDelay, "Jittered duration should be at least the minimum")
+		assert.LessOrEqual(t, jittered, maxDelay, "Jittered duration should not exceed the maximum even on overflow")
+	})
+}
+
+func TestJitterRandomness(t *testing.T) {
+	t.Parallel()
+
+	const samples = 50
+
+	base := 8 * time.Second
+
+	t.Run("equal varies", func(t *testing.T) {
+		t.Parallel()
+
+		seen := make(map[time.Duration]struct{})
+
+		for range samples {
+			seen[jitter.Equal(base)] = struct{}{}
+		}
+
+		assert.Greater(t, len(seen), 1, "Equal jitter should produce varied durations")
+	})
+
+	t.Run("full varies", func(t *testing.T) {
+		t.Parallel()
+
+		seen := make(map[time.Duration]struct{})
+
+		for range samples {
+			seen[jitter.Full(base)] = struct{}{}
+		}
+
+		assert.Greater(t, len(seen), 1, "Full jitter should produce varied durations")
+	})
+
+	t.Run("decorrelated varies", func(t *testing.T) {
+		t.Parallel()
+
+		seen := make(map[time.Duration]struct{})
+
+		for range samples {
+			seen[jitter.Decorrelated(time.Second, time.Minute, 4*time.Second)] = struct{}{}
+		}
+
+		assert.Greater(t, len(seen), 1, "Decorrelated jitter should produce varied durations")
 	})
 }

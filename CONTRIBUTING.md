@@ -11,14 +11,14 @@ Whether you’re fixing a bug, adding a new feature, improving documentation, or
 
 ## Have a Question?
 
-If you have any questions about how to use `hq-go-retrier`, please use other communication channels (such as discussion forums or community chats) instead of opening a GitHub issue.
+If you have any questions about how to use `hq-lib-retrier-go`, please use other communication channels (such as discussion forums or community chats) instead of opening a GitHub issue.
 
 > [!CAUTION]
 > Our issue tracker is reserved for bug reports and feature requests. Questions that are not directly related to a bug or feature request may be closed to keep the issue tracker focused.
 
 ## Found a Bug?
 
-If you've identified a bug in `hq-go-retrier`, please [create an issue](#create-an-issue). If you are able to fix the bug, feel free to [submit a pull request](#create-a-pull-requests) with your solution. Reference the bug issue in your PR description so that it can be linked automatically.
+If you've identified a bug in `hq-lib-retrier-go`, please [create an issue](#create-an-issue). If you are able to fix the bug, feel free to [submit a pull request](#create-a-pull-requests) with your solution. Reference the bug issue in your PR description so that it can be linked automatically.
 
 ## Have a Feature Request?
 
@@ -42,11 +42,11 @@ If you decide to implement the feature, [submit a pull request](#create-a-pull-r
 
 - Search Existing Issues:
 
-Before submitting an issue, search our [issue tracker](https://github.com/hueristiq/hq-go-retrier/issues) to see if the issue has already been submitted.
+Before submitting an issue, search our [issue tracker](https://github.com/hueristiq/hq-lib-retrier-go/issues) to see if the issue has already been submitted.
 
 - Submit an Issue:
 
-Assuming no existing issues exist, please [open a new issue](https://github.com/hueristiq/hq-go-retrier/issues/new), ensure you include required information when submitting the issue to ensure we can quickly reproduce your issue. We may have additional questions and will communicate through the GitHub issue, so please respond back to our questions to help reproduce and resolve the issue as quickly as possible.
+Assuming no existing issues exist, please [open a new issue](https://github.com/hueristiq/hq-lib-retrier-go/issues/new), ensure you include required information when submitting the issue to ensure we can quickly reproduce your issue. We may have additional questions and will communicate through the GitHub issue, so please respond back to our questions to help reproduce and resolve the issue as quickly as possible.
 
 ### Create a Pull Requests
 

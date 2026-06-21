@@ -17,8 +17,7 @@ import (
 //     lead to rapid retry attempts.
 //   - maxDelay (time.Duration): The maximum allowable delay duration. Caps the returned backoff
 //     duration to prevent excessively long delays, ensuring retries occur within a reasonable
-//     timeframe.
-//   - attempt (int): Typically, maxDelay should be greater than or equal to minDelay.
+//     timeframe. Typically, maxDelay should be greater than or equal to minDelay.
 //   - attempt (int): The current retry attempt number, typically starting at 1 for the first retry.
 //     Implementations use this value to adjust the delay (e.g., increasing it for subsequent retries
 //     in exponential backoff).
