@@ -7,6 +7,12 @@ import (
 	"github.com/hueristiq/hq-lib-retrier-go/backoff"
 )
 
+const (
+	defaultRetryMax     = 3
+	defaultRetryWaitMin = 1 * time.Second
+	defaultRetryWaitMax = 30 * time.Second
+)
+
 // options holds the settings for retry operations, defining the behavior of the retry
 // mechanism.
 //
@@ -114,8 +120,9 @@ func WithRetryMax(retryMax int) OptionFunc {
 // This is particularly important for preventing overwhelming a system with rapid retries.
 //
 // Parameters:
-//   - retryWaitMin (time.Duration): The minimum delay duration. Should be non-negative; negative
-//     values may lead to undefined behavior.
+//   - retryWaitMin (time.Duration): The minimum delay duration. Values less than or equal to 0
+//     fall back to the default of 1 second, so a misconfigured retrier cannot spin in a
+//     zero-delay loop.
 //
 // Returns:
 //   - (OptionFunc): A functional option that sets the retryWaitMin field in the options.
@@ -131,8 +138,9 @@ func WithRetryWaitMin(retryWaitMin time.Duration) OptionFunc {
 // a reasonable timeframe. Typically, retryWaitMax should be greater than or equal to retryWaitMin.
 //
 // Parameters:
-//   - retryWaitMax (time.Duration): The maximum delay duration. Should be non-negative; negative
-//     values may lead to undefined behavior.
+//   - retryWaitMax (time.Duration): The maximum delay duration. Values less than or equal to 0
+//     fall back to the default of 30 seconds, and a value below retryWaitMin is raised to
+//     retryWaitMin.
 //
 // Returns:
 //   - (OptionFunc): A functional option that sets the retryWaitMax field in the options.
@@ -149,8 +157,8 @@ func WithRetryWaitMax(retryWaitMax time.Duration) OptionFunc {
 // retry policies, such as exponential backoff with or without jitter.
 //
 // Parameters:
-//   - retryBackoff (backoff.Backoff): The backoff strategy function. If nil, the retrier will
-//     use a default strategy (e.g., exponential backoff).
+//   - retryBackoff (backoff.Backoff): The backoff strategy function. If nil, the default
+//     strategy (exponential backoff with decorrelated jitter) is used.
 //
 // Returns:
 //   - (OptionFunc): A functional option that sets the retryBackoff field in the options.
@@ -209,6 +217,11 @@ func Retry(ctx context.Context, operation Operation, ofs ...OptionFunc) (err err
 // the operation's result and nil. If the context is canceled or times out, it returns the
 // context's error. If all retries fail, it returns the last result and error from the operation.
 //
+// After the options are applied, invalid values are normalized: a nil backoff falls back to
+// exponential backoff with decorrelated jitter, non-positive wait bounds fall back to their
+// defaults, and a retryWaitMax below retryWaitMin is raised to retryWaitMin. This guarantees
+// the retry loop never spins with a zero delay.
+//
 // Parameters:
 //   - ctx (context.Context): The context controlling the retry lifecycle. Cancellation or timeout
 //     aborts retries and returns ctx.Err().
@@ -222,9 +235,9 @@ func Retry(ctx context.Context, operation Operation, ofs ...OptionFunc) (err err
 //     context is canceled or times out. Returns nil if the operation succeeds.
 func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], ofs ...OptionFunc) (result T, err error) {
 	opts := &options{
-		retryMax:     3,
-		retryWaitMin: 1 * time.Second,
-		retryWaitMax: 30 * time.Second,
+		retryMax:     defaultRetryMax,
+		retryWaitMin: defaultRetryWaitMin,
+		retryWaitMax: defaultRetryWaitMax,
 		retryBackoff: backoff.ExponentialWithDecorrelatedJitter(),
 	}
 
@@ -232,39 +245,54 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 		f(opts)
 	}
 
+	if opts.retryBackoff == nil {
+		opts.retryBackoff = backoff.ExponentialWithDecorrelatedJitter()
+	}
+
+	if opts.retryWaitMin <= 0 {
+		opts.retryWaitMin = defaultRetryWaitMin
+	}
+
+	if opts.retryWaitMax <= 0 {
+		opts.retryWaitMax = defaultRetryWaitMax
+	}
+
+	if opts.retryWaitMax < opts.retryWaitMin {
+		opts.retryWaitMax = opts.retryWaitMin
+	}
+
 	for attempt := 1; ; attempt++ {
-		select {
-		case <-ctx.Done():
+		if ctx.Err() != nil {
 			err = context.Cause(ctx)
 
 			return
-		default:
-			result, err = operation()
-			if err == nil {
-				return
-			}
+		}
 
-			if opts.retryMax > 0 && attempt >= opts.retryMax {
-				return
-			}
+		result, err = operation()
+		if err == nil {
+			return
+		}
 
-			b := opts.retryBackoff(opts.retryWaitMin, opts.retryWaitMax, attempt)
+		if opts.retryMax > 0 && attempt >= opts.retryMax {
+			return
+		}
 
-			if opts.notifier != nil {
-				opts.notifier(err, b)
-			}
+		b := opts.retryBackoff(opts.retryWaitMin, opts.retryWaitMax, attempt)
 
-			timer := time.NewTimer(b)
+		if opts.notifier != nil {
+			opts.notifier(err, b)
+		}
 
-			select {
-			case <-timer.C:
-			case <-ctx.Done():
-				timer.Stop()
+		timer := time.NewTimer(b)
 
-				err = context.Cause(ctx)
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			timer.Stop()
 
-				return
-			}
+			err = context.Cause(ctx)
+
+			return
 		}
 	}
 }

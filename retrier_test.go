@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	hqgoretrier "github.com/hueristiq/hq-lib-retrier-go"
-	"github.com/hueristiq/hq-lib-retrier-go/backoff"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	hqgoretrier "github.com/hueristiq/hq-lib-retrier-go"
+	hqgoretrierbackoff "github.com/hueristiq/hq-lib-retrier-go/backoff"
 )
 
 var (
@@ -33,7 +34,7 @@ func (o *flakyOperation) run() error {
 	return nil
 }
 
-func noWaitBackoff() backoff.Backoff {
+func noWaitBackoff() hqgoretrierbackoff.Backoff {
 	return func(_, _ time.Duration, _ int) time.Duration {
 		return 0
 	}
@@ -76,12 +77,12 @@ func TestRetry_AcrossBackoffStrategies(t *testing.T) {
 
 	strategies := []struct {
 		name string
-		b    backoff.Backoff
+		b    hqgoretrierbackoff.Backoff
 	}{
-		{"exponential", backoff.Exponential()},
-		{"equal jitter", backoff.ExponentialWithEqualJitter()},
-		{"full jitter", backoff.ExponentialWithFullJitter()},
-		{"decorrelated jitter", backoff.ExponentialWithDecorrelatedJitter()},
+		{"exponential", hqgoretrierbackoff.Exponential()},
+		{"equal jitter", hqgoretrierbackoff.ExponentialWithEqualJitter()},
+		{"full jitter", hqgoretrierbackoff.ExponentialWithFullJitter()},
+		{"decorrelated jitter", hqgoretrierbackoff.ExponentialWithDecorrelatedJitter()},
 	}
 
 	for _, s := range strategies {
@@ -252,25 +253,71 @@ func TestRetry_BackoffReceivesConfiguredArgs(t *testing.T) {
 	}, calls, "Expected backoff to receive configured bounds and increasing attempt numbers")
 }
 
-func TestRetry_ZeroWaitMin(t *testing.T) {
+func TestRetry_NilBackoffFallsBackToDefault(t *testing.T) {
 	t.Parallel()
 
-	op := &flakyOperation{failures: 2}
+	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
 
-	require.NotPanics(t, func() {
-		err := hqgoretrier.Retry(
-			t.Context(),
-			op.run,
-			hqgoretrier.WithRetryMax(5),
-			hqgoretrier.WithRetryWaitMin(0),
-			hqgoretrier.WithRetryWaitMax(0),
-			hqgoretrier.WithRetryBackoff(backoff.Exponential()),
-		)
+	defer cancel()
 
-		require.NoError(t, err, "Expected the operation to succeed after retries")
-	})
+	op := &flakyOperation{failures: 1000}
 
-	assert.Equal(t, 3, op.calls, "Expected the operation to be called 3 times")
+	err := hqgoretrier.Retry(
+		ctx,
+		op.run,
+		hqgoretrier.WithRetryMax(0),
+		hqgoretrier.WithRetryBackoff(nil),
+	)
+
+	require.ErrorIs(t, err, context.DeadlineExceeded, "Expected the default backoff's wait to outlast the context")
+	assert.Equal(t, 1, op.calls, "Expected a single attempt before the default backoff's wait begins")
+}
+
+func TestRetry_WaitBoundsAreNormalized(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		waitMin time.Duration
+		waitMax time.Duration
+		wantMin time.Duration
+		wantMax time.Duration
+	}{
+		{"zero bounds", 0, 0, time.Second, 30 * time.Second},
+		{"negative bounds", -time.Second, -time.Second, time.Second, 30 * time.Second},
+		{"zero min", 0, 5 * time.Second, time.Second, 5 * time.Second},
+		{"zero max", 5 * time.Second, 0, 5 * time.Second, 30 * time.Second},
+		{"max below min", 10 * time.Second, 5 * time.Second, 10 * time.Second, 10 * time.Second},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var gotMin, gotMax time.Duration
+
+			recording := func(minDelay, maxDelay time.Duration, _ int) time.Duration {
+				gotMin, gotMax = minDelay, maxDelay
+
+				return 0
+			}
+
+			op := &flakyOperation{failures: 1000}
+
+			err := hqgoretrier.Retry(
+				t.Context(),
+				op.run,
+				hqgoretrier.WithRetryMax(2),
+				hqgoretrier.WithRetryWaitMin(tt.waitMin),
+				hqgoretrier.WithRetryWaitMax(tt.waitMax),
+				hqgoretrier.WithRetryBackoff(recording),
+			)
+
+			require.ErrorIs(t, err, errTestOperation, "Expected the last operation error")
+			assert.Equal(t, tt.wantMin, gotMin, "Expected the normalized minimum wait")
+			assert.Equal(t, tt.wantMax, gotMax, "Expected the normalized maximum wait")
+		})
+	}
 }
 
 func TestRetry_ContextCanceledBeforeStart(t *testing.T) {
@@ -345,7 +392,7 @@ func TestRetry_ContextTimeout(t *testing.T) {
 		hqgoretrier.WithRetryMax(1000),
 		hqgoretrier.WithRetryWaitMin(30*time.Millisecond),
 		hqgoretrier.WithRetryWaitMax(100*time.Millisecond),
-		hqgoretrier.WithRetryBackoff(backoff.Exponential()),
+		hqgoretrier.WithRetryBackoff(hqgoretrierbackoff.Exponential()),
 	)
 
 	require.ErrorIs(t, err, context.DeadlineExceeded, "Expected a deadline-exceeded error")
@@ -367,7 +414,7 @@ func TestRetry_UnlimitedRetriesStopOnContext(t *testing.T) {
 		hqgoretrier.WithRetryMax(0),
 		hqgoretrier.WithRetryWaitMin(time.Millisecond),
 		hqgoretrier.WithRetryWaitMax(2*time.Millisecond),
-		hqgoretrier.WithRetryBackoff(backoff.Exponential()),
+		hqgoretrier.WithRetryBackoff(hqgoretrierbackoff.Exponential()),
 	)
 
 	require.ErrorIs(t, err, context.DeadlineExceeded, "Expected the context deadline to stop unlimited retries")

@@ -23,7 +23,10 @@
 //   - [WithNotifier] registers a callback invoked after every failed attempt.
 //
 // Unset options fall back to defaults: three attempts, a one-second minimum and thirty-second
-// maximum wait, and exponential backoff with decorrelated jitter.
+// maximum wait, and exponential backoff with decorrelated jitter. Invalid values are normalized
+// the same way — a nil backoff or non-positive wait bounds fall back to the defaults, and a
+// maximum wait below the minimum is raised to the minimum — so retries never spin in a
+// zero-delay loop.
 //
 // # Backoff and jitter
 //

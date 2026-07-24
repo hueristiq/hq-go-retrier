@@ -10,13 +10,13 @@
 //     delay in [base/2, base].
 //   - [ExponentialWithFullJitter] randomizes the entire base, yielding a delay in [0, base). This
 //     spreads retries most aggressively.
-//   - [ExponentialWithDecorrelatedJitter] draws from a range that widens with the previous delay,
-//     decoupling successive waits.
+//   - [ExponentialWithDecorrelatedJitter] draws from a range bounded by the previous delay it
+//     produced, decoupling successive waits. It is the only stateful strategy.
 //
 // Jittered strategies reduce the "thundering herd" effect, where many clients that failed together
 // retry in lockstep and overwhelm a recovering service. Each constructor returns a ready-to-use
 // Backoff; pass one to [github.com/hueristiq/hq-lib-retrier-go.WithRetryBackoff].
 //
 // All strategies guard against integer overflow and return a zero duration for invalid input —
-// non-positive bounds or a negative attempt.
+// non-positive bounds, a minimum above the maximum, or a negative attempt.
 package backoff

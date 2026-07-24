@@ -140,7 +140,7 @@ func TestExponentialBackoff(t *testing.T) {
 				minDelay: 2 * time.Second,
 				maxDelay: time.Second,
 				attempt:  0,
-				expected: time.Second,
+				expected: 0,
 			},
 			{
 				name:     "negative attempt",
@@ -283,7 +283,7 @@ func TestExponentialWithEqualJitterBackoff(t *testing.T) {
 			{"negative maxDelay", time.Millisecond, -time.Second, 1, true},
 			{"negative attempt", time.Millisecond, time.Second, -1, true},
 			{"minDelay = maxDelay", time.Second, time.Second, 5, false},
-			{"minDelay > maxDelay", 2 * time.Second, time.Second, 0, false},
+			{"minDelay > maxDelay", 2 * time.Second, time.Second, 0, true},
 			{"zero attempt", time.Millisecond, time.Second, 0, false},
 		}
 
@@ -376,7 +376,7 @@ func TestExponentialWithFullJitterBackoff(t *testing.T) {
 			{"negative maxDelay", time.Millisecond, -time.Second, 1, true},
 			{"negative attempt", time.Millisecond, time.Second, -1, true},
 			{"minDelay = maxDelay", time.Second, time.Second, 5, false},
-			{"minDelay > maxDelay", 2 * time.Second, time.Second, 0, false},
+			{"minDelay > maxDelay", 2 * time.Second, time.Second, 0, true},
 			{"zero attempt", time.Millisecond, time.Second, 0, false},
 		}
 
@@ -502,4 +502,27 @@ func TestExponentialWithDecorrelatedJitterBackoff(t *testing.T) {
 		assert.GreaterOrEqual(t, delay, time.Duration(0))
 		assert.LessOrEqual(t, delay, maxDelay, "Should not exceed maxDelay when overflow would occur")
 	})
+}
+
+// sinkDuration keeps benchmark results from being optimized away.
+var sinkDuration time.Duration
+
+func BenchmarkExponential(b *testing.B) {
+	b.ReportAllocs()
+
+	bo := Exponential()
+
+	for b.Loop() {
+		sinkDuration = bo(time.Millisecond, 30*time.Second, 5)
+	}
+}
+
+func BenchmarkExponentialWithDecorrelatedJitter(b *testing.B) {
+	b.ReportAllocs()
+
+	bo := ExponentialWithDecorrelatedJitter()
+
+	for b.Loop() {
+		sinkDuration = bo(time.Millisecond, 30*time.Second, 5)
+	}
 }

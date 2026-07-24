@@ -83,6 +83,7 @@ func TestFullJitter(t *testing.T) {
 		assert.Equal(t, time.Duration(0), jittered, "For very small backoffs, should return 0")
 	})
 }
+
 func TestDecorrelatedJitter(t *testing.T) {
 	t.Parallel()
 
@@ -234,4 +235,31 @@ func TestJitterRandomness(t *testing.T) {
 
 		assert.Greater(t, len(seen), 1, "Decorrelated jitter should produce varied durations")
 	})
+}
+
+// sinkDuration keeps benchmark results from being optimized away.
+var sinkDuration time.Duration
+
+func BenchmarkEqual(b *testing.B) {
+	b.ReportAllocs()
+
+	for b.Loop() {
+		sinkDuration = Equal(8 * time.Second)
+	}
+}
+
+func BenchmarkFull(b *testing.B) {
+	b.ReportAllocs()
+
+	for b.Loop() {
+		sinkDuration = Full(8 * time.Second)
+	}
+}
+
+func BenchmarkDecorrelated(b *testing.B) {
+	b.ReportAllocs()
+
+	for b.Loop() {
+		sinkDuration = Decorrelated(time.Second, time.Minute, 4*time.Second)
+	}
 }

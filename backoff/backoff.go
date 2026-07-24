@@ -11,10 +11,13 @@ import (
 // of this type determine the wait time before a retry attempt, allowing for flexible and customizable
 // retry logic in fault-tolerant systems.
 //
+// Implementations must be safe for concurrent use by multiple goroutines, since a single Backoff
+// value may be shared across independent retry loops.
+//
 // Parameters:
-//   - minDelay (time.Duration): The minimum allowable delay duration. Ensures that the returned
-//     backoff duration is at least this value, preventing excessively short delays that could
-//     lead to rapid retry attempts.
+//   - minDelay (time.Duration): The minimum allowable delay duration. Strategies use it as the
+//     base (or floor) of the delay, preventing excessively short delays that could lead to
+//     rapid retry attempts. Jittered strategies may dip below it; see the Returns section.
 //   - maxDelay (time.Duration): The maximum allowable delay duration. Caps the returned backoff
 //     duration to prevent excessively long delays, ensuring retries occur within a reasonable
 //     timeframe. Typically, maxDelay should be greater than or equal to minDelay.
@@ -23,7 +26,9 @@ import (
 //     in exponential backoff).
 //
 // Returns:
-//   - backoff (time.Duration): The calculated delay duration to wait before the next retry attempt.
-//     The duration is computed based on the implemented strategy (e.g., constant, linear, or
-//     exponential) and is guaranteed to be in the range [minDelay, maxDelay].
+//   - backoff (time.Duration): The calculated delay duration to wait before the next retry attempt,
+//     computed based on the implemented strategy (e.g., constant, linear, or exponential). For
+//     valid input the delay lies in [0, maxDelay]; jittered strategies may legitimately return
+//     less than minDelay. Implementations return a zero duration for invalid input — non-positive
+//     bounds, minDelay greater than maxDelay, or a negative attempt.
 type Backoff func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration)

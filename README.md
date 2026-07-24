@@ -32,7 +32,7 @@ To install `hq-lib-retrier-go`, run the following command in your Go project:
 go get -v -u github.com/hueristiq/hq-lib-retrier-go
 ```
 
-This package requires Go 1.25 or later.
+This package requires Go 1.26.3 or later.
 
 ## Usage
 
@@ -149,10 +149,12 @@ Behavior is set through functional options passed to `Retry` or `RetryWithData`.
 | Option | Description | Default |
 | --- | --- | --- |
 | `WithRetryMax(n)` | Maximum number of attempts, **including the initial call** (so `3` means the first call plus up to two retries). A value `<= 0` retries indefinitely until success or context cancellation. | `3` |
-| `WithRetryWaitMin(d)` | Lower bound for the delay between attempts. | `1s` |
-| `WithRetryWaitMax(d)` | Upper bound for the delay between attempts. | `30s` |
-| `WithRetryBackoff(b)` | Strategy that computes each delay (see below). | `ExponentialWithDecorrelatedJitter()` |
+| `WithRetryWaitMin(d)` | Lower bound for the delay between attempts. A value `<= 0` falls back to the default. | `1s` |
+| `WithRetryWaitMax(d)` | Upper bound for the delay between attempts. A value `<= 0` falls back to the default; a value below the minimum is raised to the minimum. | `30s` |
+| `WithRetryBackoff(b)` | Strategy that computes each delay (see below). Passing `nil` selects the default. | `ExponentialWithDecorrelatedJitter()` |
 | `WithNotifier(fn)` | Callback invoked after each failed attempt with the error and the next delay. | none |
+
+Invalid values are normalized before the first attempt, so a misconfigured retrier never spins in a zero-delay loop.
 
 ## Backoff & Jitter Strategies
 
@@ -161,11 +163,11 @@ The delay between attempts is produced by a `backoff.Backoff` function. The `bac
 | Strategy | Delay range | Notes |
 | --- | --- | --- |
 | `Exponential()` | `base` | Deterministic; no jitter. |
-| `ExponentialWithEqualJitter()` | `[base/2, base]` | Half the delay is fixed, half is random. |
+| `ExponentialWithEqualJitter()` | `[base/2, base)` | Half the delay is fixed, half is random. |
 | `ExponentialWithFullJitter()` | `[0, base)` | Fully randomized; spreads retries most aggressively. |
-| `ExponentialWithDecorrelatedJitter()` | `[minDelay, min(maxDelay, previous*3)]` | Default; decouples successive delays. |
+| `ExponentialWithDecorrelatedJitter()` | `[minDelay, min(maxDelay, previous*3)]` | Default; decouples successive delays. Stateful. |
 
-Here `base` is `min(maxDelay, minDelay * 2^attempt)` and `previous` is the base delay of the prior attempt. All strategies guard against integer overflow and return a zero duration for invalid input (non-positive bounds or a negative attempt).
+Here `base` is `min(maxDelay, minDelay * 2^attempt)` and `previous` is the delay the strategy produced on its preceding call — the decorrelated strategy remembers its last delay, so each draw depends on the previous random draw (true decorrelated jitter). It is safe for concurrent use, but a shared instance couples the delay sequences of all its callers; create one per retry loop for independent decorrelation. All strategies guard against integer overflow and return a zero duration for invalid input (non-positive bounds, a minimum above the maximum, or a negative attempt).
 
 The jitter functions are also exported directly from the [`jitter`](https://pkg.go.dev/github.com/hueristiq/hq-lib-retrier-go/jitter) package for building custom strategies. To implement your own, supply any function matching the `backoff.Backoff` signature to `WithRetryBackoff`:
 
