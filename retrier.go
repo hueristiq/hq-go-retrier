@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/hueristiq/hq-lib-retrier-go/backoff"
+	hqgoretrierbackoff "github.com/hueristiq/hq-lib-retrier-go/backoff"
 )
 
 const (
@@ -30,7 +30,7 @@ type options struct {
 	retryMax     int
 	retryWaitMin time.Duration
 	retryWaitMax time.Duration
-	retryBackoff backoff.Backoff
+	retryBackoff hqgoretrierbackoff.Backoff
 	notifier     Notifier
 }
 
@@ -162,7 +162,7 @@ func WithRetryWaitMax(retryWaitMax time.Duration) OptionFunc {
 //
 // Returns:
 //   - (OptionFunc): A functional option that sets the retryBackoff field in the options.
-func WithRetryBackoff(retryBackoff backoff.Backoff) OptionFunc {
+func WithRetryBackoff(retryBackoff hqgoretrierbackoff.Backoff) OptionFunc {
 	return func(opts *options) {
 		opts.retryBackoff = retryBackoff
 	}
@@ -238,7 +238,7 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 		retryMax:     defaultRetryMax,
 		retryWaitMin: defaultRetryWaitMin,
 		retryWaitMax: defaultRetryWaitMax,
-		retryBackoff: backoff.ExponentialWithDecorrelatedJitter(),
+		retryBackoff: hqgoretrierbackoff.ExponentialWithDecorrelatedJitter(),
 	}
 
 	for _, f := range ofs {
@@ -246,7 +246,7 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 	}
 
 	if opts.retryBackoff == nil {
-		opts.retryBackoff = backoff.ExponentialWithDecorrelatedJitter()
+		opts.retryBackoff = hqgoretrierbackoff.ExponentialWithDecorrelatedJitter()
 	}
 
 	if opts.retryWaitMin <= 0 {

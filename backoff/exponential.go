@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hueristiq/hq-lib-retrier-go/jitter"
+	hqgoretrierjitter "github.com/hueristiq/hq-lib-retrier-go/jitter"
 )
 
 // exponential computes the base exponential backoff for a given attempt.
@@ -97,7 +97,7 @@ func ExponentialWithEqualJitter() Backoff {
 			return
 		}
 
-		backoff = jitter.Equal(base)
+		backoff = hqgoretrierjitter.Equal(base)
 
 		return
 	}
@@ -130,7 +130,7 @@ func ExponentialWithFullJitter() Backoff {
 			return
 		}
 
-		backoff = jitter.Full(base)
+		backoff = hqgoretrierjitter.Full(base)
 
 		return
 	}
@@ -178,7 +178,7 @@ func ExponentialWithDecorrelatedJitter() Backoff {
 		mu.Lock()
 		defer mu.Unlock()
 
-		backoff = jitter.Decorrelated(minDelay, maxDelay, previous)
+		backoff = hqgoretrierjitter.Decorrelated(minDelay, maxDelay, previous)
 		previous = backoff
 
 		return
