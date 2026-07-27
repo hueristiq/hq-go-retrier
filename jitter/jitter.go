@@ -1,17 +1,17 @@
 package jitter
 
 import (
-	"crypto/rand"
-	"math/big"
+	"math"
+	"math/rand/v2"
 	"time"
 )
 
 // Equal calculates a jitter duration using the equal jitter strategy based on the provided backoff.
 //
 // This strategy introduces moderate randomness by calculating a midpoint of the backoff duration
-// and adding a random offset between 0 and that midpoint. The resulting jitter duration is guaranteed
-// to be in the range [backoff/2, backoff], balancing predictability and randomization to avoid
-// synchronized retry spikes in distributed systems.
+// and adding a random offset between 0 and that midpoint. The resulting jitter duration lies in
+// the range [backoff/2, backoff), balancing predictability and randomization to avoid synchronized
+// retry spikes in distributed systems.
 //
 //	jitter = (backoff / 2) + random(0, backoff / 2)
 //
@@ -19,20 +19,16 @@ import (
 //   - backoff (time.Duration): The base backoff duration to which jitter is applied.
 //
 // Returns:
-//   - jitter (time.Duration): The calculated jitter duration, always in [backoff/2, backoff] for positive backoff.
-//     Returns 0 if backoff is 0 or negative.
+//   - jitter (time.Duration): The calculated jitter duration, in [backoff/2, backoff) for
+//     positive backoff. Returns 0 if backoff is 0 or negative.
 func Equal(backoff time.Duration) (jitter time.Duration) {
-	jitter = 0
-
 	if backoff <= 0 {
-		return
+		return 0
 	}
 
 	midpoint := backoff / 2
 
-	jitter = midpoint + getRandomDuration(midpoint)
-
-	return
+	return midpoint + getRandomDuration(midpoint)
 }
 
 // Full calculates a jitter duration using the full jitter strategy based on the provided backoff.
@@ -46,91 +42,71 @@ func Equal(backoff time.Duration) (jitter time.Duration) {
 //   - backoff (time.Duration): The base backoff duration to which jitter is applied.
 //
 // Returns:
-//   - jitter (time.Duration): The calculated jitter duration, in [0, backoff] for positive backoff.
+//   - jitter (time.Duration): The calculated jitter duration, in [0, backoff) for positive backoff.
 //     Returns 0 if backoff is 0 or negative.
 func Full(backoff time.Duration) (jitter time.Duration) {
-	jitter = 0
-
 	if backoff <= 0 {
-		return
+		return 0
 	}
 
-	jitter = getRandomDuration(backoff)
-
-	return
+	return getRandomDuration(backoff)
 }
 
 // Decorrelated calculates a jitter duration using the decorrelated jitter strategy,
 // incorporating the previous backoff to reduce correlation between successive retries.
 //
-// This strategy introduces randomness influenced by the previous backoff duration, while enforcing
-// minimum and maximum delay bounds. It is designed to prevent exponential backoff growth from
-// becoming excessive, while still providing randomness to avoid synchronized retries.
-// The jitter is calculated as follows:
-//   - If previous is 0, it is set to minDelay.
-//   - A random duration is generated in the range [0, previous * 3).
-//   - The random duration is added to minDelay.
-//   - The result is capped at maxDelay to ensure it does not exceed the maximum allowed delay.
+// This strategy draws a delay from the range [minDelay, min(maxDelay, previous * 3)], where the
+// upper bound grows with the previous backoff. This prevents exponential growth from becoming
+// excessive while still providing randomness to avoid synchronized retries. The computation is:
+//   - If previous is non-positive, it is set to minDelay.
+//   - The upper bound is min(maxDelay, previous * 3), computed without overflowing.
+//   - A random duration in [minDelay, upper] is returned, capped at maxDelay.
 //
 // Parameters:
 //   - minDelay (time.Duration): The minimum allowable jitter duration.
 //   - maxDelay (time.Duration): The maximum allowable jitter duration.
 //   - previous (time.Duration): The previous backoff duration, influencing the jitter range.
-//     If `0`, defaults to `minDelay`.
+//     If non-positive, defaults to minDelay.
 //
 // Returns:
 //   - jitter (time.Duration): The calculated jitter duration, in [minDelay, maxDelay].
-//     Returns minDelay if previous * 3 is less than minDelay, or maxDelay if the calculated jitter exceeds it.
+//     Returns 0 if minDelay or maxDelay is negative, or if minDelay exceeds maxDelay.
 func Decorrelated(minDelay, maxDelay, previous time.Duration) (jitter time.Duration) {
-	jitter = 0
-
 	if minDelay < 0 || maxDelay < 0 || minDelay > maxDelay {
-		return
+		return 0
 	}
 
 	if previous <= 0 {
 		previous = minDelay
 	}
 
-	jitter = getRandomDuration(previous * 3)
+	upper := maxDelay
 
-	jitter += minDelay
-
-	if jitter > maxDelay {
-		jitter = maxDelay
+	if previous <= math.MaxInt64/3 {
+		upper = min(upper, previous*3)
 	}
 
-	return
+	return min(minDelay+getRandomDuration(upper-minDelay), maxDelay)
 }
 
-// getRandomDuration generates a cryptographically secure random duration between 0 and maxDuration.
+// getRandomDuration generates a random duration in the range [0, maxDuration).
 //
-// It uses the crypto/rand package to ensure high-quality randomness, suitable for jitter calculations
-// in retry strategies where unpredictability is critical.
+// It uses math/rand/v2, which is sufficient for spreading retry attempts; cryptographic randomness
+// is unnecessary for jitter.
+//
+// Performance: 0 allocs/op (see BenchmarkEqual, BenchmarkFull, and BenchmarkDecorrelated).
 //
 // Parameters:
-//   - maxDuration (time.Duration): The upper bound for the random duration. Must be positive.
+//   - maxDuration (time.Duration): The exclusive upper bound for the random duration.
 //     If 0 or negative, returns 0, as no meaningful random duration can be generated.
 //
 // Returns:
-//   - duration (time.Duration): A random duration in the range [`0`, `maxDuration`).
-//     Returns `0` if `maxDuration <= 0`.
-//     Returns `maxDuration` if the random number generation fails (fallback for robustness).
+//   - duration (time.Duration): A random duration in the range [0, maxDuration).
+//     Returns 0 if maxDuration <= 0.
 func getRandomDuration(maxDuration time.Duration) (duration time.Duration) {
-	duration = 0
-
 	if maxDuration <= 0 {
-		return
+		return 0
 	}
 
-	n, err := rand.Int(rand.Reader, big.NewInt(int64(maxDuration)))
-	if err != nil {
-		duration = maxDuration
-
-		return
-	}
-
-	duration = time.Duration(n.Int64())
-
-	return
+	return time.Duration(rand.Int64N(int64(maxDuration)))
 }
