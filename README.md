@@ -49,7 +49,7 @@ import (
 	"time"
 
 	hqgoretrier "github.com/hueristiq/hq-lib-retrier-go"
-	"github.com/hueristiq/hq-lib-retrier-go/backoff"
+	hqgoretrierbackoff "github.com/hueristiq/hq-lib-retrier-go/backoff"
 )
 
 func main() {
@@ -73,7 +73,7 @@ func main() {
 		hqgoretrier.WithRetryMax(5),
 		hqgoretrier.WithRetryWaitMin(100*time.Millisecond),
 		hqgoretrier.WithRetryWaitMax(2*time.Second),
-		hqgoretrier.WithRetryBackoff(backoff.ExponentialWithFullJitter()),
+		hqgoretrier.WithRetryBackoff(hqgoretrierbackoff.ExponentialWithFullJitter()),
 		hqgoretrier.WithNotifier(func(err error, next time.Duration) {
 			fmt.Printf("Retry due to error: %v. Next attempt in %v.\n", err, next)
 		}),
@@ -99,7 +99,7 @@ import (
 	"time"
 
 	hqgoretrier "github.com/hueristiq/hq-lib-retrier-go"
-	"github.com/hueristiq/hq-lib-retrier-go/backoff"
+	hqgoretrierbackoff "github.com/hueristiq/hq-lib-retrier-go/backoff"
 )
 
 func main() {
@@ -123,7 +123,7 @@ func main() {
 		hqgoretrier.WithRetryMax(5),
 		hqgoretrier.WithRetryWaitMin(200*time.Millisecond),
 		hqgoretrier.WithRetryWaitMax(3*time.Second),
-		hqgoretrier.WithRetryBackoff(backoff.Exponential()),
+		hqgoretrier.WithRetryBackoff(hqgoretrierbackoff.Exponential()),
 		hqgoretrier.WithNotifier(func(err error, next time.Duration) {
 			fmt.Printf("Retrying after error: %v, waiting: %v\n", err, next)
 		}),
