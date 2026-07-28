@@ -1,10 +1,10 @@
 # hq-lib-retrier-go
 
-![made with go](https://img.shields.io/badge/made%20with-Go-1E90FF.svg) [![go reference](https://pkg.go.dev/badge/github.com/hueristiq/hq-lib-retrier-go.svg)](https://pkg.go.dev/github.com/hueristiq/hq-lib-retrier-go) [![license](https://img.shields.io/badge/license-MIT-gray.svg?color=1E90FF)](https://github.com/hueristiq/hq-lib-retrier-go/blob/master/LICENSE) ![maintenance](https://img.shields.io/badge/maintained%3F-yes-1E90FF.svg) [![open issues](https://img.shields.io/github/issues-raw/hueristiq/hq-lib-retrier-go.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-lib-retrier-go/issues?q=is:issue+is:open) [![closed issues](https://img.shields.io/github/issues-closed-raw/hueristiq/hq-lib-retrier-go.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-lib-retrier-go/issues?q=is:issue+is:closed) [![contribution](https://img.shields.io/badge/contributions-welcome-1E90FF.svg)](https://github.com/hueristiq/hq-lib-retrier-go/blob/master/CONTRIBUTING.md)
+![made with go](https://img.shields.io/badge/made%20with-Go-1E90FF.svg) [![go reference](https://pkg.go.dev/badge/github.com/hueristiq/hq-lib-retrier-go.svg)](https://pkg.go.dev/github.com/hueristiq/hq-lib-retrier-go) [![license](https://img.shields.io/badge/license-MIT-gray.svg?color=1E90FF)](https://github.com/hueristiq/hq-lib-retrier-go/blob/main/LICENSE) ![maintenance](https://img.shields.io/badge/maintained%3F-yes-1E90FF.svg) [![open issues](https://img.shields.io/github/issues-raw/hueristiq/hq-lib-retrier-go.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-lib-retrier-go/issues?q=is:issue+is:open) [![closed issues](https://img.shields.io/github/issues-closed-raw/hueristiq/hq-lib-retrier-go.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-lib-retrier-go/issues?q=is:issue+is:closed) [![contribution](https://img.shields.io/badge/contributions-welcome-1E90FF.svg)](https://github.com/hueristiq/hq-lib-retrier-go/blob/main/CONTRIBUTING.md)
 
 `hq-lib-retrier-go` is a [Go (Golang)](http://golang.org/) package for retrying operations that may fail transiently.
 
-## Resource
+## Resources
 
 - [Features](#features)
 - [Installation](#installation)
@@ -158,9 +158,9 @@ Behavior is set through functional options passed to `Retry` or `RetryWithData`.
 
 | Option | Description | Default |
 | --- | --- | --- |
-| `WithMaxAttempts(n)` | Maximum number of attempts, **including the initial call** (so `3` means the first call plus up to two retries). A value `<= 0` falls back to the default; pass `math.MaxInt` for effectively unbounded retries bounded only by the context. | `3` |
-| `WithRetryWaitMin(d)` | Lower bound for the delay between attempts. A value `<= 0` falls back to the default. | `1s` |
-| `WithRetryWaitMax(d)` | Upper bound for the delay between attempts. A value `<= 0` falls back to the default; a value below the minimum is raised to the minimum. | `30s` |
+| `WithMaxAttempts(n)` | Maximum number of attempts, **including the initial call** (so `3` means the first call plus up to two retries). A value `<= 0` falls back to the default; pass `math.MaxInt` for effectively unbounded retries bounded only by the context. | `DefaultMaxAttempts` (`3`) |
+| `WithRetryWaitMin(d)` | Lower bound for the delay between attempts. A value `<= 0` falls back to the default. | `DefaultWaitMin` (`1s`) |
+| `WithRetryWaitMax(d)` | Upper bound for the delay between attempts. A value `<= 0` falls back to the default; a value below the minimum is raised to the minimum. | `DefaultWaitMax` (`30s`) |
 | `WithRetryBackoff(fn)` | Constructor for the strategy that computes each delay (see below). It is called once per retry loop with the normalized bounds, so stateful strategies always get fresh state. Passing `nil` selects the default. | `backoff.ExponentialWithDecorrelatedJitter` |
 | `WithRetryIf(fn)` | Predicate deciding whether a failed attempt's error is retryable; returning `false` stops retrying and returns that error. | retry all errors |
 | `WithNotifier(fn)` | Callback invoked after each failed attempt that will be retried, receiving the attempt number, the error, and the next delay. | none |
@@ -194,7 +194,7 @@ hqgoretrier.WithRetryBackoff(func(minDelay, maxDelay time.Duration) hqgoretrierb
 
 ## Contributing
 
-Contributions are welcome and encouraged! Feel free to submit [Pull Requests](https://github.com/hueristiq/hq-lib-retrier-go/pulls) or report [Issues](https://github.com/hueristiq/hq-lib-retrier-go/issues). For more details, check out the [contribution guidelines](https://github.com/hueristiq/hq-lib-retrier-go/blob/master/CONTRIBUTING.md).
+Contributions are welcome and encouraged! Feel free to submit [Pull Requests](https://github.com/hueristiq/hq-lib-retrier-go/pulls) or report [Issues](https://github.com/hueristiq/hq-lib-retrier-go/issues). For more details, check out the [contribution guidelines](https://github.com/hueristiq/hq-lib-retrier-go/blob/main/CONTRIBUTING.md).
 
 A big thank you to all the [contributors](https://github.com/hueristiq/hq-lib-retrier-go/graphs/contributors) for your ongoing support!
 
@@ -202,4 +202,4 @@ A big thank you to all the [contributors](https://github.com/hueristiq/hq-lib-re
 
 ## Licensing
 
-This package is licensed under the [MIT license](https://opensource.org/license/mit). You are free to use, modify, and distribute it, as long as you follow the terms of the license. You can find the full license text in the repository - [Full MIT license text](https://github.com/hueristiq/hq-lib-retrier-go/blob/master/LICENSE).
+This package is licensed under the [MIT license](https://opensource.org/license/mit). You are free to use, modify, and distribute it, as long as you follow the terms of the license. You can find the full license text in the repository - [Full MIT license text](https://github.com/hueristiq/hq-lib-retrier-go/blob/main/LICENSE).

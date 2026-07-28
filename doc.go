@@ -28,11 +28,12 @@
 //   - [WithRetryIf] decides per error whether another attempt is worthwhile.
 //   - [WithNotifier] registers a callback invoked after every failed attempt that will be retried.
 //
-// Unset options fall back to defaults: three attempts, a one-second minimum and thirty-second
-// maximum wait, and exponential backoff with decorrelated jitter. Invalid values are normalized
-// the same way — a nil backoff constructor, a non-positive attempt limit, or non-positive wait
-// bounds fall back to the defaults, and a maximum wait below the minimum is raised to the
-// minimum — so retries never spin in a zero-delay loop.
+// Unset options fall back to defaults: [DefaultMaxAttempts] attempts, a minimum wait of
+// [DefaultWaitMin] and a maximum wait of [DefaultWaitMax], and exponential backoff with
+// decorrelated jitter. Invalid values are normalized the same way — a nil backoff constructor,
+// a non-positive attempt limit, or non-positive wait bounds fall back to the defaults, and a
+// maximum wait below the minimum is raised to the minimum — so retries never spin in a
+// zero-delay loop.
 //
 // # Non-retryable errors
 //

@@ -113,9 +113,25 @@ func (o Operation) withEmptyData() (operationWithData OperationWithData[struct{}
 type OperationWithData[T any] func() (data T, err error)
 
 const (
-	defaultMaxAttempts = 3
-	defaultWaitMin     = 1 * time.Second
-	defaultWaitMax     = 30 * time.Second
+	// DefaultMaxAttempts is the default maximum number of attempts, counting the initial call.
+	//
+	// It applies when WithMaxAttempts is not supplied, and when a supplied value less than or
+	// equal to 0 is normalized back to the default.
+	DefaultMaxAttempts = 3
+
+	// DefaultWaitMin is the default minimum delay between retry attempts, serving as the base
+	// delay for backoff calculations.
+	//
+	// It applies when WithRetryWaitMin is not supplied, and when a supplied value less than or
+	// equal to 0 is normalized back to the default.
+	DefaultWaitMin = 1 * time.Second
+
+	// DefaultWaitMax is the default maximum delay between retry attempts, capping the backoff
+	// duration.
+	//
+	// It applies when WithRetryWaitMax is not supplied, and when a supplied value less than or
+	// equal to 0 is normalized back to the default.
+	DefaultWaitMax = 30 * time.Second
 )
 
 // WithMaxAttempts returns an OptionFunc that sets the maximum number of attempts.
@@ -125,7 +141,7 @@ const (
 //
 // Parameters:
 //   - maxAttempts (int): The maximum number of attempts, including the initial one. Values less
-//     than or equal to 0 fall back to the default of 3. To retry until the context is canceled,
+//     than or equal to 0 fall back to DefaultMaxAttempts. To retry until the context is canceled,
 //     pass a very large value such as math.MaxInt.
 //
 // Returns:
@@ -140,7 +156,7 @@ func WithMaxAttempts(maxAttempts int) (f OptionFunc) {
 //
 // Deprecated: use WithMaxAttempts. Note the behavior change for non-positive values: WithRetryMax
 // documented retryMax less than or equal to 0 as unlimited retries, while WithMaxAttempts falls
-// back to the default of 3 attempts — pass a very large value such as math.MaxInt for effectively
+// back to DefaultMaxAttempts — pass a very large value such as math.MaxInt for effectively
 // unbounded retries.
 //
 // Parameters:
@@ -159,7 +175,7 @@ func WithRetryMax(retryMax int) (f OptionFunc) {
 //
 // Parameters:
 //   - retryWaitMin (time.Duration): The minimum delay duration. Values less than or equal to 0
-//     fall back to the default of 1 second, so a misconfigured retrier cannot spin in a
+//     fall back to DefaultWaitMin, so a misconfigured retrier cannot spin in a
 //     zero-delay loop.
 //
 // Returns:
@@ -177,7 +193,7 @@ func WithRetryWaitMin(retryWaitMin time.Duration) (f OptionFunc) {
 //
 // Parameters:
 //   - retryWaitMax (time.Duration): The maximum delay duration. Values less than or equal to 0
-//     fall back to the default of 30 seconds, and a value below retryWaitMin is raised to
+//     fall back to DefaultWaitMax, and a value below retryWaitMin is raised to
 //     retryWaitMin.
 //
 // Returns:
@@ -315,9 +331,9 @@ func Retry(ctx context.Context, operation Operation, ofs ...OptionFunc) (err err
 //     context is canceled or times out. Returns nil if the operation succeeds.
 func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], ofs ...OptionFunc) (result T, err error) {
 	opts := &options{
-		maxAttempts: defaultMaxAttempts,
-		waitMin:     defaultWaitMin,
-		waitMax:     defaultWaitMax,
+		maxAttempts: DefaultMaxAttempts,
+		waitMin:     DefaultWaitMin,
+		waitMax:     DefaultWaitMax,
 		newBackoff:  hqgoretrierbackoff.ExponentialWithDecorrelatedJitter,
 	}
 
@@ -326,15 +342,15 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 	}
 
 	if opts.maxAttempts <= 0 {
-		opts.maxAttempts = defaultMaxAttempts
+		opts.maxAttempts = DefaultMaxAttempts
 	}
 
 	if opts.waitMin <= 0 {
-		opts.waitMin = defaultWaitMin
+		opts.waitMin = DefaultWaitMin
 	}
 
 	if opts.waitMax <= 0 {
-		opts.waitMax = defaultWaitMax
+		opts.waitMax = DefaultWaitMax
 	}
 
 	if opts.waitMax < opts.waitMin {

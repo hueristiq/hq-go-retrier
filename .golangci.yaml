@@ -18,7 +18,7 @@ linters:
         # - dupword
         - durationcheck
         # - err113
-        # - errcheck
+        - errcheck
         - errchkjson
         - errname
         # - errorlint
@@ -45,7 +45,7 @@ linters:
         # - gomodguard
         - gomodguard_v2
         - goprintffuncname
-        # - gosec
+        - gosec
         # - gosmopolitan
         - govet
         - grouper
@@ -134,6 +134,15 @@ linters:
     exclusions:
         paths:
             - examples
+
+formatters:
+    enable:
+        - gofmt
+        - goimports
+
+    settings:
+        goimports:
+            local-prefixes: github.com/hueristiq
 
 issues:
     whole-files: false

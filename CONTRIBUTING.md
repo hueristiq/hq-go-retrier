@@ -18,7 +18,7 @@ If you have any questions about how to use `hq-lib-retrier-go`, please use other
 
 ## Found a Bug?
 
-If you've identified a bug in `hq-lib-retrier-go`, please [create an issue](#create-an-issue). If you are able to fix the bug, feel free to [submit a pull request](#create-a-pull-requests) with your solution. Reference the bug issue in your PR description so that it can be linked automatically.
+If you've identified a bug in `hq-lib-retrier-go`, please [create an issue](#create-an-issue). If you are able to fix the bug, feel free to [submit a pull request](#create-a-pull-request) with your solution. Reference the bug issue in your PR description so that it can be linked automatically.
 
 ## Have a Feature Request?
 
@@ -34,7 +34,7 @@ Engage in the discussion within the issue. This helps clarify the scope and requ
 
 - Contribute Code:
 
-If you decide to implement the feature, [submit a pull request](#create-a-pull-requests) that references the issue (for example, using `fixes #<issue-number>`) so that the issue is automatically closed once your PR is merged.
+If you decide to implement the feature, [submit a pull request](#create-a-pull-request) that references the issue (for example, using `fixes #<issue-number>`) so that the issue is automatically closed once your PR is merged.
 
 ## Ready to Contribute
 
@@ -48,6 +48,6 @@ Before submitting an issue, search our [issue tracker](https://github.com/hueris
 
 Assuming no existing issues exist, please [open a new issue](https://github.com/hueristiq/hq-lib-retrier-go/issues/new), ensure you include required information when submitting the issue to ensure we can quickly reproduce your issue. We may have additional questions and will communicate through the GitHub issue, so please respond back to our questions to help reproduce and resolve the issue as quickly as possible.
 
-### Create a Pull Requests
+### Create a Pull Request
 
 Pull requests should target the `dev` branch. Please also reference the issue from the description of the pull request using [special keyword syntax](https://help.github.com/articles/closing-issues-via-commit-messages/) to auto close the issue when the PR is merged. For example, include the phrase `fixes #14` in the PR description to have issue `#14` auto close.

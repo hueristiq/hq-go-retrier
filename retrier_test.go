@@ -166,7 +166,7 @@ func TestRetry_MaxAttemptsFallsBackToDefault(t *testing.T) {
 			)
 
 			require.ErrorIs(t, err, errTestOperation, "Expected the last operation error")
-			assert.Equal(t, 3, op.calls, "Expected a non-positive maxAttempts to fall back to the default of 3 attempts")
+			assert.Equal(t, hqgoretrier.DefaultMaxAttempts, op.calls, "Expected a non-positive maxAttempts to fall back to DefaultMaxAttempts")
 		})
 	}
 }
@@ -204,6 +204,14 @@ func TestRetry_OptionsLastOneWins(t *testing.T) {
 	assert.Equal(t, 2, op.calls, "Expected the later option to override the earlier one")
 }
 
+func TestDefaultConstants(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, 3, hqgoretrier.DefaultMaxAttempts, "Expected the default maximum attempts to be 3")
+	assert.Equal(t, time.Second, hqgoretrier.DefaultWaitMin, "Expected the default minimum wait to be 1 second")
+	assert.Equal(t, 30*time.Second, hqgoretrier.DefaultWaitMax, "Expected the default maximum wait to be 30 seconds")
+}
+
 func TestRetry_DefaultMaxAttempts(t *testing.T) {
 	t.Parallel()
 
@@ -216,7 +224,7 @@ func TestRetry_DefaultMaxAttempts(t *testing.T) {
 	)
 
 	require.Error(t, err, "Expected the operation to fail after the default number of attempts")
-	assert.Equal(t, 3, op.calls, "Expected the default of 3 attempts")
+	assert.Equal(t, hqgoretrier.DefaultMaxAttempts, op.calls, "Expected the default of DefaultMaxAttempts attempts")
 }
 
 func TestRetry_ReturnsLastError(t *testing.T) {
@@ -460,10 +468,10 @@ func TestRetry_WaitBoundsAreNormalized(t *testing.T) {
 		wantMin time.Duration
 		wantMax time.Duration
 	}{
-		{"zero bounds", 0, 0, time.Second, 30 * time.Second},
-		{"negative bounds", -time.Second, -time.Second, time.Second, 30 * time.Second},
-		{"zero min", 0, 5 * time.Second, time.Second, 5 * time.Second},
-		{"zero max", 5 * time.Second, 0, 5 * time.Second, 30 * time.Second},
+		{"zero bounds", 0, 0, hqgoretrier.DefaultWaitMin, hqgoretrier.DefaultWaitMax},
+		{"negative bounds", -time.Second, -time.Second, hqgoretrier.DefaultWaitMin, hqgoretrier.DefaultWaitMax},
+		{"zero min", 0, 5 * time.Second, hqgoretrier.DefaultWaitMin, 5 * time.Second},
+		{"zero max", 5 * time.Second, 0, 5 * time.Second, hqgoretrier.DefaultWaitMax},
 		{"max below min", 10 * time.Second, 5 * time.Second, 10 * time.Second, 10 * time.Second},
 	}
 
