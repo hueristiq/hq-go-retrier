@@ -11,6 +11,7 @@
 - [Usage](#usage)
 	- [Basic Retry](#basic-retry)
 	- [Retry With Data](#retry-with-data)
+	- [Non-Retryable Errors](#non-retryable-errors)
 - [Configuration](#configuration)
 - [Backoff & Jitter Strategies](#backoff--jitter-strategies)
 - [Contributing](#contributing)
@@ -21,7 +22,8 @@
 - **Configurable retry policy**: Set the maximum number of attempts, the minimum and maximum delay between attempts, and the backoff strategy.
 - **Context support**: Every attempt and every wait observes the supplied `context.Context`, so cancellation and deadlines are respected immediately.
 - **Result-carrying operations**: `RetryWithData` retries operations that return a value alongside an error and hands the value back to the caller.
-- **Notifier callback**: A callback fires after each failed attempt with the triggering error and the next delay — useful for logging, metrics, or debugging.
+- **Non-retryable errors**: Mark an error as permanent with `Permanent`, or classify errors with the `WithRetryIf` predicate, so failures a retry cannot fix stop the loop immediately.
+- **Notifier callback**: A callback fires after each failed attempt that will be retried, with the attempt number, the triggering error, and the next delay — useful for logging, metrics, or debugging.
 - **Backoff and jitter strategies**: Built-in exponential backoff with equal, full, or decorrelated jitter to mitigate the "thundering herd" problem in distributed systems.
 
 ## Installation
@@ -70,12 +72,12 @@ func main() {
 	defer cancel()
 
 	err := hqgoretrier.Retry(ctx, operation,
-		hqgoretrier.WithRetryMax(5),
+		hqgoretrier.WithMaxAttempts(5),
 		hqgoretrier.WithRetryWaitMin(100*time.Millisecond),
 		hqgoretrier.WithRetryWaitMax(2*time.Second),
-		hqgoretrier.WithRetryBackoff(hqgoretrierbackoff.ExponentialWithFullJitter()),
-		hqgoretrier.WithNotifier(func(err error, next time.Duration) {
-			fmt.Printf("Retry due to error: %v. Next attempt in %v.\n", err, next)
+		hqgoretrier.WithRetryBackoff(hqgoretrierbackoff.ExponentialWithFullJitter),
+		hqgoretrier.WithNotifier(func(attempt int, err error, next time.Duration) {
+			fmt.Printf("Attempt %d failed: %v. Next attempt in %v.\n", attempt, err, next)
 		}),
 	)
 	if err != nil {
@@ -120,12 +122,12 @@ func main() {
 	defer cancel()
 
 	result, err := hqgoretrier.RetryWithData(ctx, fetchData,
-		hqgoretrier.WithRetryMax(5),
+		hqgoretrier.WithMaxAttempts(5),
 		hqgoretrier.WithRetryWaitMin(200*time.Millisecond),
 		hqgoretrier.WithRetryWaitMax(3*time.Second),
-		hqgoretrier.WithRetryBackoff(hqgoretrierbackoff.Exponential()),
-		hqgoretrier.WithNotifier(func(err error, next time.Duration) {
-			fmt.Printf("Retrying after error: %v, waiting: %v\n", err, next)
+		hqgoretrier.WithRetryBackoff(hqgoretrierbackoff.Exponential),
+		hqgoretrier.WithNotifier(func(attempt int, err error, next time.Duration) {
+			fmt.Printf("Attempt %d failed: %v, waiting %v.\n", attempt, err, next)
 		}),
 	)
 	if err != nil {
@@ -138,7 +140,41 @@ func main() {
 }
 ```
 
-When the context is canceled or its deadline passes, both functions stop retrying and return [`context.Cause(ctx)`](https://pkg.go.dev/context#Cause). On a clean context, the result of the final attempt — its value for `RetryWithData`, plus its error — is returned.
+### Non-Retryable Errors
+
+Two mechanisms stop the retry loop early and return the offending error:
+
+- `Permanent(err)` marks an error from inside the operation. The marker survives further `fmt.Errorf` wrapping, and the error returned to the caller reads and matches (`errors.Is`/`errors.As`) exactly as the operation wrote it:
+
+```go
+operation := func() error {
+	resp, err := http.Get("https://api.example.com/data")
+	if err != nil {
+		return err // transient: retried
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusBadRequest {
+		return hqgoretrier.Permanent(errors.New("request is malformed")) // never retried
+	}
+
+	if resp.StatusCode >= 500 {
+		return fmt.Errorf("server error: %d", resp.StatusCode) // retried
+	}
+
+	return nil
+}
+```
+
+- `WithRetryIf(fn)` classifies errors from the caller's side, without touching the operation:
+
+```go
+err := hqgoretrier.Retry(ctx, operation,
+	hqgoretrier.WithRetryIf(func(err error) bool {
+		return !errors.Is(err, sql.ErrNoRows) // missing rows are not worth retrying
+	}),
+)
+```
 
 ## Configuration
 
@@ -146,32 +182,37 @@ Behavior is set through functional options passed to `Retry` or `RetryWithData`.
 
 | Option | Description | Default |
 | --- | --- | --- |
-| `WithRetryMax(n)` | Maximum number of attempts, **including the initial call** (so `3` means the first call plus up to two retries). A value `<= 0` retries indefinitely until success or context cancellation. | `3` |
+| `WithMaxAttempts(n)` | Maximum number of attempts, **including the initial call** (so `3` means the first call plus up to two retries). A value `<= 0` falls back to the default; pass `math.MaxInt` for effectively unbounded retries bounded only by the context. | `3` |
 | `WithRetryWaitMin(d)` | Lower bound for the delay between attempts. A value `<= 0` falls back to the default. | `1s` |
 | `WithRetryWaitMax(d)` | Upper bound for the delay between attempts. A value `<= 0` falls back to the default; a value below the minimum is raised to the minimum. | `30s` |
-| `WithRetryBackoff(b)` | Strategy that computes each delay (see below). Passing `nil` selects the default. | `ExponentialWithDecorrelatedJitter()` |
-| `WithNotifier(fn)` | Callback invoked after each failed attempt with the error and the next delay. | none |
+| `WithRetryBackoff(fn)` | Constructor for the strategy that computes each delay (see below). It is called once per retry loop with the normalized bounds, so stateful strategies always get fresh state. Passing `nil` selects the default. | `backoff.ExponentialWithDecorrelatedJitter` |
+| `WithRetryIf(fn)` | Predicate deciding whether a failed attempt's error is retryable; returning `false` stops retrying and returns that error. | retry all errors |
+| `WithNotifier(fn)` | Callback invoked after each failed attempt that will be retried, receiving the attempt number, the error, and the next delay. | none |
+
+`WithRetryMax` remains available as a deprecated alias for `WithMaxAttempts`.
 
 Invalid values are normalized before the first attempt, so a misconfigured retrier never spins in a zero-delay loop.
 
 ## Backoff & Jitter Strategies
 
-The delay between attempts is produced by a `backoff.Backoff` function. The `backoff` package provides exponential strategies, where the base delay grows as `min(maxDelay, minDelay * 2^attempt)`. Jitter adds randomness so that clients which failed together do not retry in lockstep.
+The delay between attempts is produced by a `backoff.Backoff` function — `func(attempt int) time.Duration`. Constructors take the delay bounds and return the ready-to-use strategy; the retrier calls the constructor once per retry loop with the normalized bounds, so stateful strategies always see fresh per-loop state. The `backoff` package provides exponential strategies, where the base delay grows as `min(maxDelay, minDelay * 2^attempt)`. Jitter adds randomness so that clients which failed together do not retry in lockstep.
 
 | Strategy | Delay range | Notes |
 | --- | --- | --- |
-| `Exponential()` | `base` | Deterministic; no jitter. |
-| `ExponentialWithEqualJitter()` | `[base/2, base)` | Half the delay is fixed, half is random. |
-| `ExponentialWithFullJitter()` | `[0, base)` | Fully randomized; spreads retries most aggressively. |
-| `ExponentialWithDecorrelatedJitter()` | `[minDelay, min(maxDelay, previous*3)]` | Default; decouples successive delays. Stateful. |
+| `Exponential(min, max)` | `base` | Deterministic; no jitter. |
+| `ExponentialWithEqualJitter(min, max)` | `[base/2, base)` | Half the delay is fixed, half is random. |
+| `ExponentialWithFullJitter(min, max)` | `[0, base)` | Fully randomized; spreads retries most aggressively. |
+| `ExponentialWithDecorrelatedJitter(min, max)` | `[min, min(max, previous*3)]` | Default; decouples successive delays. Stateful. |
 
-Here `base` is `min(maxDelay, minDelay * 2^attempt)` and `previous` is the delay the strategy produced on its preceding call — the decorrelated strategy remembers its last delay, so each draw depends on the previous random draw (true decorrelated jitter). It is safe for concurrent use, but a shared instance couples the delay sequences of all its callers; create one per retry loop for independent decorrelation. All strategies guard against integer overflow and return a zero duration for invalid input (non-positive bounds, a minimum above the maximum, or a negative attempt).
+Here `base` is `min(maxDelay, minDelay * 2^attempt)` and `previous` is the delay the strategy produced on its preceding call — the decorrelated strategy remembers its last delay, so each draw depends on the previous random draw (true decorrelated jitter). It is safe for concurrent use. All strategies guard against integer overflow and produce a zero duration for invalid input (a constructor called with non-positive bounds or a minimum above the maximum, or a negative attempt).
 
-The jitter functions are also exported directly from the [`jitter`](https://pkg.go.dev/github.com/hueristiq/hq-lib-retrier-go/jitter) package for building custom strategies. To implement your own, supply any function matching the `backoff.Backoff` signature to `WithRetryBackoff`:
+The jitter functions are also exported directly from the [`jitter`](https://pkg.go.dev/github.com/hueristiq/hq-lib-retrier-go/jitter) package for building custom strategies. To implement your own, pass a constructor to `WithRetryBackoff`:
 
 ```go
-hqgoretrier.WithRetryBackoff(func(minDelay, maxDelay time.Duration, attempt int) time.Duration {
-	return minDelay // constant backoff
+hqgoretrier.WithRetryBackoff(func(minDelay, maxDelay time.Duration) hqgoretrierbackoff.Backoff {
+	return func(attempt int) time.Duration {
+		return minDelay // constant backoff
+	}
 })
 ```
 

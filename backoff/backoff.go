@@ -11,24 +11,23 @@ import (
 // of this type determine the wait time before a retry attempt, allowing for flexible and customizable
 // retry logic in fault-tolerant systems.
 //
+// A Backoff is bound to its minimum and maximum delays when it is created — the constructors in
+// this package take those bounds and return the ready-to-use function — so each call needs only
+// the attempt number.
+//
 // Implementations must be safe for concurrent use by multiple goroutines, since a single Backoff
 // value may be shared across independent retry loops.
 //
 // Parameters:
-//   - minDelay (time.Duration): The minimum allowable delay duration. Strategies use it as the
-//     base (or floor) of the delay, preventing excessively short delays that could lead to
-//     rapid retry attempts. Jittered strategies may dip below it; see the Returns section.
-//   - maxDelay (time.Duration): The maximum allowable delay duration. Caps the returned backoff
-//     duration to prevent excessively long delays, ensuring retries occur within a reasonable
-//     timeframe. Typically, maxDelay should be greater than or equal to minDelay.
-//   - attempt (int): The current retry attempt number, typically starting at 1 for the first retry.
-//     Implementations use this value to adjust the delay (e.g., increasing it for subsequent retries
-//     in exponential backoff).
+//   - attempt (int): The current retry attempt number, starting at 1. When driven by the
+//     retrier, it is the number of the attempt that just failed. Implementations use this value
+//     to adjust the delay (e.g., increasing it for subsequent retries in exponential backoff).
 //
 // Returns:
-//   - backoff (time.Duration): The calculated delay duration to wait before the next retry attempt,
-//     computed based on the implemented strategy (e.g., constant, linear, or exponential). For
-//     valid input the delay lies in [0, maxDelay]; jittered strategies may legitimately return
-//     less than minDelay. Implementations return a zero duration for invalid input — non-positive
-//     bounds, minDelay greater than maxDelay, or a negative attempt.
-type Backoff func(minDelay, maxDelay time.Duration, attempt int) (backoff time.Duration)
+//   - delay (time.Duration): The calculated delay duration to wait before the next retry attempt,
+//     computed based on the implemented strategy (e.g., constant, linear, or exponential). For a
+//     valid attempt the delay lies in [0, the configured maximum]; jittered strategies may
+//     legitimately return less than the configured minimum. A negative attempt yields a zero
+//     duration, and a Backoff created with invalid bounds — non-positive bounds or a minimum
+//     above the maximum — always returns zero.
+type Backoff func(attempt int) (delay time.Duration)

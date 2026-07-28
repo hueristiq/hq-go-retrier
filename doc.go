@@ -1,5 +1,6 @@
 // Package retrier runs operations that may fail transiently, retrying them with a configurable
-// backoff until they succeed, a limit is reached, or the context is canceled.
+// backoff until they succeed, a limit is reached, an error proves permanent, or the context is
+// canceled.
 //
 // It suits work whose failures are often temporary — network requests, database queries, calls to
 // external APIs — where a brief pause and another attempt is more useful than failing on the first
@@ -12,28 +13,40 @@
 // caller. Retry is a thin wrapper over RetryWithData, so both share identical retry, backoff, and
 // cancellation behavior.
 //
+// Operations receive no context of their own; capture the context passed to the entry point if an
+// attempt needs cancellation or a deadline. An operation may run several times, so it must be
+// prepared to execute again after a failure.
+//
 // # Configuration
 //
 // Behavior is set through functional options passed to either entry point:
 //
-//   - [WithRetryMax] caps the number of attempts, counting the initial call. A value less than or
-//     equal to zero retries indefinitely until success or cancellation.
+//   - [WithMaxAttempts] caps the number of attempts, counting the initial call.
 //   - [WithRetryWaitMin] and [WithRetryWaitMax] bound the delay between attempts.
-//   - [WithRetryBackoff] selects the strategy that computes each delay.
-//   - [WithNotifier] registers a callback invoked after every failed attempt.
+//   - [WithRetryBackoff] selects the strategy that computes each delay. It takes a constructor,
+//     which the retrier calls once per retry loop with the normalized bounds.
+//   - [WithRetryIf] decides per error whether another attempt is worthwhile.
+//   - [WithNotifier] registers a callback invoked after every failed attempt that will be retried.
 //
 // Unset options fall back to defaults: three attempts, a one-second minimum and thirty-second
 // maximum wait, and exponential backoff with decorrelated jitter. Invalid values are normalized
-// the same way — a nil backoff or non-positive wait bounds fall back to the defaults, and a
-// maximum wait below the minimum is raised to the minimum — so retries never spin in a
-// zero-delay loop.
+// the same way — a nil backoff constructor, a non-positive attempt limit, or non-positive wait
+// bounds fall back to the defaults, and a maximum wait below the minimum is raised to the
+// minimum — so retries never spin in a zero-delay loop.
+//
+// # Non-retryable errors
+//
+// Not every failure deserves another attempt. An operation can mark an error as permanent with
+// [Permanent], and the caller can classify errors with [WithRetryIf]; either mechanism stops the
+// retry loop immediately and returns the offending error.
 //
 // # Backoff and jitter
 //
 // The delay between attempts comes from a [github.com/hueristiq/hq-lib-retrier-go/backoff.Backoff]
-// function. The backoff package provides exponential strategies, optionally combined with the
-// jitter strategies in [github.com/hueristiq/hq-lib-retrier-go/jitter] to spread retries across
-// clients and avoid the thundering-herd problem.
+// function, called with the 1-based number of the attempt that just failed. The backoff package
+// provides exponential strategies, optionally combined with the jitter strategies in
+// [github.com/hueristiq/hq-lib-retrier-go/jitter] to spread retries across clients and avoid the
+// thundering-herd problem.
 //
 // # Context
 //
@@ -41,4 +54,17 @@
 // deadline passes, the active call returns [context.Cause] for that context and abandons any
 // further attempts. On a clean context, the result of the final attempt — its value for
 // RetryWithData, plus its error — is returned.
+//
+// # Concurrency
+//
+// The entry points are safe to call from multiple goroutines: every call is independent and
+// constructs its own backoff state. Callbacks — the notifier and the retry predicate — are
+// invoked synchronously on the retry loop's goroutine; a callback shared across concurrent loops
+// must itself be safe for concurrent use.
+//
+// # Panics
+//
+// A panicking operation is not recovered: the panic propagates to the caller and aborts the
+// retry loop. Recover inside the operation and convert the panic into an error if it should be
+// retried.
 package retrier
