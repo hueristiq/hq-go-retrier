@@ -1,6 +1,6 @@
 // Package retrier runs operations that may fail transiently, retrying them with a configurable
-// backoff until they succeed, a limit is reached, an error proves permanent, or the context is
-// canceled.
+// backoff until they succeed, a limit is reached, an error proves not worth retrying, or the
+// context is canceled.
 //
 // It suits work whose failures are often temporary — network requests, database queries, calls to
 // external APIs — where a brief pause and another attempt is more useful than failing on the first
@@ -36,9 +36,9 @@
 //
 // # Non-retryable errors
 //
-// Not every failure deserves another attempt. An operation can mark an error as permanent with
-// [Permanent], and the caller can classify errors with [WithRetryIf]; either mechanism stops the
-// retry loop immediately and returns the offending error.
+// Not every failure deserves another attempt. The [WithRetryIf] predicate classifies errors after
+// each failed attempt; when it rejects an error, the retry loop stops immediately and returns
+// that error instead of scheduling the next one.
 //
 // # Backoff and jitter
 //

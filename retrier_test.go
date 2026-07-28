@@ -367,29 +367,6 @@ func TestRetry_NotifierSkipsFinalAttempt(t *testing.T) {
 func TestRetry_NotifierSilentWithoutUpcomingRetry(t *testing.T) {
 	t.Parallel()
 
-	t.Run("permanent error", func(t *testing.T) {
-		t.Parallel()
-
-		notified := 0
-
-		op := func() error {
-			return hqgoretrier.Permanent(errTestOperation)
-		}
-
-		err := hqgoretrier.Retry(
-			t.Context(),
-			op,
-			hqgoretrier.WithMaxAttempts(5),
-			hqgoretrier.WithRetryBackoff(noWaitBackoff),
-			hqgoretrier.WithNotifier(func(int, error, time.Duration) {
-				notified++
-			}),
-		)
-
-		require.ErrorIs(t, err, errTestOperation, "Expected the permanent error")
-		assert.Zero(t, notified, "Expected no notification when no retry follows a permanent error")
-	})
-
 	t.Run("rejected by predicate", func(t *testing.T) {
 		t.Parallel()
 

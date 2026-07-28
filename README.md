@@ -22,7 +22,7 @@
 - **Configurable retry policy**: Set the maximum number of attempts, the minimum and maximum delay between attempts, and the backoff strategy.
 - **Context support**: Every attempt and every wait observes the supplied `context.Context`, so cancellation and deadlines are respected immediately.
 - **Result-carrying operations**: `RetryWithData` retries operations that return a value alongside an error and hands the value back to the caller.
-- **Non-retryable errors**: Mark an error as permanent with `Permanent`, or classify errors with the `WithRetryIf` predicate, so failures a retry cannot fix stop the loop immediately.
+- **Non-retryable errors**: Classify errors with the `WithRetryIf` predicate, so failures a retry cannot fix stop the loop immediately.
 - **Notifier callback**: A callback fires after each failed attempt that will be retried, with the attempt number, the triggering error, and the next delay — useful for logging, metrics, or debugging.
 - **Backoff and jitter strategies**: Built-in exponential backoff with equal, full, or decorrelated jitter to mitigate the "thundering herd" problem in distributed systems.
 
@@ -142,31 +142,7 @@ func main() {
 
 ### Non-Retryable Errors
 
-Two mechanisms stop the retry loop early and return the offending error:
-
-- `Permanent(err)` marks an error from inside the operation. The marker survives further `fmt.Errorf` wrapping, and the error returned to the caller reads and matches (`errors.Is`/`errors.As`) exactly as the operation wrote it:
-
-```go
-operation := func() error {
-	resp, err := http.Get("https://api.example.com/data")
-	if err != nil {
-		return err // transient: retried
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusBadRequest {
-		return hqgoretrier.Permanent(errors.New("request is malformed")) // never retried
-	}
-
-	if resp.StatusCode >= 500 {
-		return fmt.Errorf("server error: %d", resp.StatusCode) // retried
-	}
-
-	return nil
-}
-```
-
-- `WithRetryIf(fn)` classifies errors from the caller's side, without touching the operation:
+Not every failure deserves another attempt — a `400 Bad Request` fails the same way every time. `WithRetryIf(fn)` classifies errors after each failed attempt; when it returns `false`, the retry loop stops immediately and returns the offending error instead of scheduling the next one:
 
 ```go
 err := hqgoretrier.Retry(ctx, operation,

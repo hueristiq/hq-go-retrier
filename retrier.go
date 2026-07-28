@@ -2,7 +2,6 @@ package retrier
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	hqgoretrierbackoff "github.com/hueristiq/hq-lib-retrier-go/backoff"
@@ -18,10 +17,10 @@ import (
 //     base delay for backoff calculations.
 //   - waitMax (time.Duration): The maximum allowable delay between retry attempts, capping
 //     the backoff duration.
-//   - newBackoff (func(minDelay, maxDelay time.Duration) backoff.Backoff): A constructor for the
+//   - newBackoff (func(minDelay, maxDelay time.Duration) (backoff hqgoretrierbackoff.Backoff)): A constructor for the
 //     strategy that computes the delay for each attempt. It is called once per retry loop with
 //     the normalized wait bounds, so stateful strategies get fresh state.
-//   - retryIf (func(err error) bool): A predicate deciding whether a failed attempt's error is
+//   - retryIf (func(err error) (retry bool)): A predicate deciding whether a failed attempt's error is
 //     retryable. A nil predicate retries every error.
 //   - notifier (Notifier): A callback function invoked after each failed attempt that will be
 //     retried, receiving the attempt number, the triggering error, and the computed delay.
@@ -29,8 +28,8 @@ type options struct {
 	maxAttempts int
 	waitMin     time.Duration
 	waitMax     time.Duration
-	newBackoff  func(minDelay, maxDelay time.Duration) hqgoretrierbackoff.Backoff
-	retryIf     func(err error) bool
+	newBackoff  func(minDelay, maxDelay time.Duration) (backoff hqgoretrierbackoff.Backoff)
+	retryIf     func(err error) (retry bool)
 	notifier    Notifier
 }
 
@@ -38,10 +37,10 @@ type options struct {
 //
 // It is invoked after each failed attempt that will be followed by another attempt, providing
 // the number of the attempt that failed, the error it returned, and the computed delay before
-// the next attempt. It is not invoked after a successful attempt, a permanent error, an error
-// rejected by the WithRetryIf predicate, or the final attempt allowed by WithMaxAttempts — in
-// those cases the outcome is returned directly to the caller. This allows for custom logging,
-// monitoring, or other side effects during retries.
+// the next attempt. It is not invoked after a successful attempt, an error rejected by the
+// WithRetryIf predicate, or the final attempt allowed by WithMaxAttempts — in those cases the
+// outcome is returned directly to the caller. This allows for custom logging, monitoring, or
+// other side effects during retries.
 //
 // Invocation is synchronous, on the retry loop's goroutine: a slow notifier delays the next
 // attempt. A notifier shared across concurrent retry loops must be safe for concurrent use.
@@ -217,9 +216,8 @@ func WithRetryBackoff(newBackoff func(minDelay, maxDelay time.Duration) (backoff
 // After each failed attempt the predicate is called, synchronously on the retry loop's goroutine,
 // with the attempt's error; if it returns false, the retrier stops immediately and returns that
 // error instead of scheduling another attempt. This is useful for error classes that retries
-// cannot fix, such as validation or authorization failures. Errors marked with Permanent stop
-// retries regardless of the predicate. A predicate shared across concurrent retry loops must be
-// safe for concurrent use.
+// cannot fix, such as validation or authorization failures. A predicate shared across concurrent
+// retry loops must be safe for concurrent use.
 //
 // Parameters:
 //   - retryIf (func(err error) bool): The predicate. If nil (the default), every error is
@@ -260,10 +258,9 @@ func WithNotifier(notifier Notifier) (f OptionFunc) {
 //
 // It attempts the operation up to maxAttempts times (as specified in the options), waiting
 // between attempts according to the backoff strategy. If the operation succeeds (returns nil
-// error), it returns immediately. If the operation fails with a permanent error (see Permanent)
-// or an error the WithRetryIf predicate rejects, it stops and returns that error. If the context
-// is canceled or times out, it returns the context's error. If all attempts fail, it returns the
-// last error from the operation.
+// error), it returns immediately. If the operation fails with an error the WithRetryIf predicate
+// rejects, it stops and returns that error. If the context is canceled or times out, it returns
+// the context's error. If all attempts fail, it returns the last error from the operation.
 //
 // The backoff strategy and the notifier both receive the 1-based number of the failed attempt,
 // and the notifier is invoked synchronously — a slow notifier delays the next attempt. Panics
@@ -290,10 +287,10 @@ func Retry(ctx context.Context, operation Operation, ofs ...OptionFunc) (err err
 //
 // It attempts the operation up to maxAttempts times, using the configured backoff strategy to
 // compute delays between attempts. If the operation succeeds (returns nil error), it returns
-// the operation's result and nil. If the operation fails with a permanent error (see Permanent)
-// or an error the WithRetryIf predicate rejects, it stops and returns that error. If the context
-// is canceled or times out, it returns the context's error. If all attempts fail, it returns the
-// last result and error from the operation.
+// the operation's result and nil. If the operation fails with an error the WithRetryIf predicate
+// rejects, it stops and returns that error. If the context is canceled or times out, it returns
+// the context's error. If all attempts fail, it returns the last result and error from the
+// operation.
 //
 // After the options are applied, invalid values are normalized: a nil backoff constructor falls
 // back to exponential backoff with decorrelated jitter, a non-positive attempt limit or wait
@@ -359,11 +356,6 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 
 		result, err = operation()
 		if err == nil {
-			return
-		}
-
-		var perr *permanentError
-		if errors.As(err, &perr) {
 			return
 		}
 
