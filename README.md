@@ -2,7 +2,7 @@
 
 ![made with go](https://img.shields.io/badge/made%20with-Go-1E90FF.svg) [![go reference](https://pkg.go.dev/badge/github.com/hueristiq/hq-lib-retrier-go.svg)](https://pkg.go.dev/github.com/hueristiq/hq-lib-retrier-go) [![license](https://img.shields.io/badge/license-MIT-gray.svg?color=1E90FF)](https://github.com/hueristiq/hq-lib-retrier-go/blob/main/LICENSE) ![maintenance](https://img.shields.io/badge/maintained%3F-yes-1E90FF.svg) [![open issues](https://img.shields.io/github/issues-raw/hueristiq/hq-lib-retrier-go.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-lib-retrier-go/issues?q=is:issue+is:open) [![closed issues](https://img.shields.io/github/issues-closed-raw/hueristiq/hq-lib-retrier-go.svg?style=flat&color=1E90FF)](https://github.com/hueristiq/hq-lib-retrier-go/issues?q=is:issue+is:closed) [![contribution](https://img.shields.io/badge/contributions-welcome-1E90FF.svg)](https://github.com/hueristiq/hq-lib-retrier-go/blob/main/CONTRIBUTING.md)
 
-`hq-lib-retrier-go` is a [Go (Golang)](http://golang.org/) package for retrying operations that may fail transiently.
+`hq-lib-retrier-go` is a [Go (Golang)](https://golang.org/) package for retrying operations that may fail transiently.
 
 ## Resources
 
@@ -19,12 +19,12 @@
 
 ## Features
 
-- **Configurable retry policy**: Set the maximum number of attempts, the minimum and maximum delay between attempts, and the backoff strategy.
-- **Context support**: Every attempt and every wait observes the supplied `context.Context`, so cancellation and deadlines are respected immediately.
-- **Result-carrying operations**: `RetryWithData` retries operations that return a value alongside an error and hands the value back to the caller.
-- **Non-retryable errors**: Classify errors with the `WithRetryIf` predicate, so failures a retry cannot fix stop the loop immediately.
-- **Notifier callback**: A callback fires after each failed attempt that will be retried, with the attempt number, the triggering error, and the next delay — useful for logging, metrics, or debugging.
-- **Backoff and jitter strategies**: Built-in exponential backoff with equal, full, or decorrelated jitter to mitigate the "thundering herd" problem in distributed systems.
+- **Configurable Retry Policy:** Set the maximum number of attempts, the minimum and maximum delay between attempts, and the backoff strategy.
+- **Context Support:** Every attempt and every wait observes the supplied `context.Context`, so cancellation and deadlines are respected immediately.
+- **Result-Carrying Operations:** `RetryWithData` retries operations that return a value alongside an error and hands the value back to the caller.
+- **Non-Retryable Errors:** Classify errors with the `WithRetryIf` predicate, so failures a retry cannot fix stop the loop immediately.
+- **Notifier Callback:** A callback fires after each failed attempt that will be retried, with the attempt number, the triggering error, and the next delay — useful for logging, metrics, or debugging.
+- **Backoff and Jitter Strategies:** Built-in exponential backoff with equal, full, or decorrelated jitter to mitigate the "thundering herd" problem in distributed systems.
 
 ## Installation
 
@@ -36,7 +36,11 @@ go get -v -u github.com/hueristiq/hq-lib-retrier-go
 
 ## Usage
 
-The package exposes two entry points: `Retry` for operations that return only an error, and `RetryWithData` for operations that return both a value and an error. Both accept the same functional options.
+The examples below import the package under the `hqgoretrier` alias.
+
+```go
+import hqgoretrier "github.com/hueristiq/hq-lib-retrier-go"
+```
 
 ### Basic Retry
 
@@ -178,7 +182,7 @@ The delay between attempts is produced by a `backoff.Backoff` function — `func
 | `Exponential(min, max)` | `base` | Deterministic; no jitter. |
 | `ExponentialWithEqualJitter(min, max)` | `[base/2, base)` | Half the delay is fixed, half is random. |
 | `ExponentialWithFullJitter(min, max)` | `[0, base)` | Fully randomized; spreads retries most aggressively. |
-| `ExponentialWithDecorrelatedJitter(min, max)` | `[min, min(max, previous*3)]` | Default; decouples successive delays. Stateful. |
+| `ExponentialWithDecorrelatedJitter(min, max)` | `[min, min(max, previous*3))` | Default; decouples successive delays. Stateful. |
 
 Here `base` is `min(maxDelay, minDelay * 2^attempt)` and `previous` is the delay the strategy produced on its preceding call — the decorrelated strategy remembers its last delay, so each draw depends on the previous random draw (true decorrelated jitter). It is safe for concurrent use. All strategies guard against integer overflow and produce a zero duration for invalid input (a constructor called with non-positive bounds or a minimum above the maximum, or a negative attempt).
 
