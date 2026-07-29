@@ -491,8 +491,6 @@ func TestExponentialWithDecorrelatedJitterBackoff(t *testing.T) {
 		first := ExponentialWithDecorrelatedJitter(minDelay, maxDelay)
 		second := ExponentialWithDecorrelatedJitter(minDelay, maxDelay)
 
-		// Drive the first instance far into its sequence; a fresh instance must still start
-		// from minDelay, proving the two carry no shared state.
 		for range 20 {
 			first(1)
 		}
@@ -568,7 +566,6 @@ func TestExponentialWithDecorrelatedJitterConcurrentUse(t *testing.T) {
 	assert.Zero(t, failures.Load(), "Expected every concurrent draw to stay within bounds")
 }
 
-// sinkDuration keeps benchmark results from being optimized away.
 var sinkDuration time.Duration
 
 func BenchmarkExponential(b *testing.B) {

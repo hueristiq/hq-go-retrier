@@ -50,8 +50,6 @@ func TestEqualJitter(t *testing.T) {
 	t.Run("odd backoff truncates midpoint", func(t *testing.T) {
 		t.Parallel()
 
-		// midpoint is 1ns and the random draw from [0, 1ns) is always 0, so the
-		// result is deterministic.
 		assert.Equal(t, 1*time.Nanosecond, Equal(3*time.Nanosecond), "Expected the truncated midpoint for an odd backoff")
 	})
 }
@@ -292,7 +290,6 @@ func TestJitterConcurrentUse(t *testing.T) {
 	assert.Zero(t, failures.Load(), "Expected every concurrent jitter draw to stay within its documented range")
 }
 
-// sinkDuration keeps benchmark results from being optimized away.
 var sinkDuration time.Duration
 
 func BenchmarkEqual(b *testing.B) {
