@@ -142,7 +142,8 @@ formatters:
 
     settings:
         goimports:
-            local-prefixes: github.com/hueristiq
+            local-prefixes:
+                - github.com/hueristiq
 
 issues:
     whole-files: false
