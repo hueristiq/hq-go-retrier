@@ -1,6 +1,8 @@
 package jitter
 
 import (
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -32,7 +34,7 @@ func TestEqualJitter(t *testing.T) {
 			midpoint := backoff / 2
 
 			assert.GreaterOrEqual(t, jittered, midpoint, "Jittered duration should be at least the midpoint")
-			assert.LessOrEqual(t, jittered, backoff, "Jittered duration should not exceed the original backoff")
+			assert.Less(t, jittered, backoff, "Jittered duration should be below the original backoff, the range is [backoff/2, backoff)")
 		}
 	})
 
@@ -43,6 +45,12 @@ func TestEqualJitter(t *testing.T) {
 		jittered := Equal(backoff)
 
 		assert.Equal(t, backoff/2, jittered, "For very small backoffs, should return midpoint")
+	})
+
+	t.Run("odd backoff truncates midpoint", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, 1*time.Nanosecond, Equal(3*time.Nanosecond), "Expected the truncated midpoint for an odd backoff")
 	})
 }
 
@@ -99,6 +107,13 @@ func TestDecorrelatedJitter(t *testing.T) {
 		t.Parallel()
 
 		assert.Equal(t, time.Duration(0), Decorrelated(10, 5, 0))
+	})
+
+	t.Run("zero bounds", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, time.Duration(0), Decorrelated(0, 0, 0))
+		assert.Equal(t, time.Duration(0), Decorrelated(0, 0, 5*time.Second))
 	})
 
 	t.Run("min equals max", func(t *testing.T) {
@@ -237,7 +252,44 @@ func TestJitterRandomness(t *testing.T) {
 	})
 }
 
-// sinkDuration keeps benchmark results from being optimized away.
+func TestJitterConcurrentUse(t *testing.T) {
+	t.Parallel()
+
+	const (
+		goroutines = 8
+		draws      = 100
+	)
+
+	base := 8 * time.Second
+
+	var (
+		wg       sync.WaitGroup
+		failures atomic.Int32
+	)
+
+	for range goroutines {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			for range draws {
+				equal := Equal(base)
+				full := Full(base)
+				decorrelated := Decorrelated(time.Second, time.Minute, base)
+
+				if equal < base/2 || equal >= base || full < 0 || full >= base || decorrelated < time.Second || decorrelated > time.Minute {
+					failures.Add(1)
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	assert.Zero(t, failures.Load(), "Expected every concurrent jitter draw to stay within its documented range")
+}
+
 var sinkDuration time.Duration
 
 func BenchmarkEqual(b *testing.B) {

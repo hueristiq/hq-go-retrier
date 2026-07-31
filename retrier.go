@@ -7,49 +7,56 @@ import (
 	hqgoretrierbackoff "github.com/hueristiq/hq-lib-retrier-go/backoff"
 )
 
-const (
-	defaultRetryMax     = 3
-	defaultRetryWaitMin = 1 * time.Second
-	defaultRetryWaitMax = 30 * time.Second
-)
-
 // options holds the settings for retry operations, defining the behavior of the retry
 // mechanism.
 //
 // Fields:
-//   - retryMax (int): The maximum number of retry attempts allowed before giving up.
-//   - retryWaitMin (time.Duration): The minimum allowable delay between retry attempts, serving as the
+//   - maxAttempts (int): The maximum number of attempts allowed before giving up, counting the
+//     initial call.
+//   - waitMin (time.Duration): The minimum allowable delay between retry attempts, serving as the
 //     base delay for backoff calculations.
-//   - retryWaitMax (time.Duration): The maximum allowable delay between retry attempts, capping
+//   - waitMax (time.Duration): The maximum allowable delay between retry attempts, capping
 //     the backoff duration.
-//   - retryBackoff (backoff.Backoff): A function that calculates the backoff duration based on
-//     the current attempt number, retryWaitMin, and retryWaitMax.
-//   - notifier (Notifier): A callback function invoked on each retry attempt, receiving the error
-//     that triggered the retry and the computed backoff duration.
+//   - newBackoff (func(minDelay, maxDelay time.Duration) (backoff hqgoretrierbackoff.Backoff)): A constructor for the
+//     strategy that computes the delay for each attempt. It is called once per retry loop with
+//     the normalized wait bounds, so stateful strategies get fresh state.
+//   - retryIf (func(err error) (retry bool)): A predicate deciding whether a failed attempt's error is
+//     retryable. A nil predicate retries every error.
+//   - notifier (Notifier): A callback function invoked after each failed attempt that will be
+//     retried, receiving the attempt number, the triggering error, and the computed delay.
 type options struct {
-	retryMax     int
-	retryWaitMin time.Duration
-	retryWaitMax time.Duration
-	retryBackoff hqgoretrierbackoff.Backoff
-	notifier     Notifier
+	maxAttempts int
+	waitMin     time.Duration
+	waitMax     time.Duration
+	newBackoff  func(minDelay, maxDelay time.Duration) (backoff hqgoretrierbackoff.Backoff)
+	retryIf     func(err error) (retry bool)
+	notifier    Notifier
 }
 
-// Notifier is a callback function type used to handle notifications during retry attempts.
+// Notifier is a callback function type used to observe retry attempts.
 //
-// It is invoked after each failed retry attempt, providing the error that caused the retry and
-// the computed backoff duration before the next attempt. This allows for custom logging,
-// monitoring, or other side effects during retries.
+// It is invoked after each failed attempt that will be followed by another attempt, providing
+// the number of the attempt that failed, the error it returned, and the computed delay before
+// the next attempt. It is not invoked after a successful attempt, an error rejected by the
+// WithRetryOn predicate, or the final attempt allowed by WithMaxAttempts — in those cases the
+// outcome is returned directly to the caller. This allows for custom logging, monitoring, or
+// other side effects during retries.
+//
+// Invocation is synchronous, on the retry loop's goroutine: a slow notifier delays the next
+// attempt. A notifier shared across concurrent retry loops must be safe for concurrent use.
 //
 // Parameters:
-//   - err (error): The error encountered during the current retry attempt. Will not be nil.
-//   - backoff (time.Duration): The computed delay duration before the next retry attempt.
-type Notifier func(err error, backoff time.Duration)
+//   - attempt (int): The number of the attempt that just failed, starting at 1.
+//   - err (error): The error the failed attempt returned. Will not be nil.
+//   - wait (time.Duration): The computed delay before the next attempt begins.
+type Notifier func(attempt int, err error, wait time.Duration)
 
 // OptionFunc is a function type used to modify the retry options in a declarative manner.
 //
 // It allows users to customize retry behavior by setting fields in the options struct,
-// such as the maximum number of retries, delay bounds, backoff strategy, or notifier callback.
-// Multiple options can be combined to create a tailored retry policy.
+// such as the maximum number of attempts, delay bounds, backoff strategy, retry predicate,
+// or notifier callback. Multiple options can be combined to create a tailored retry policy.
+// When the same option is supplied more than once, the last one wins.
 //
 // Parameters:
 //   - opts (*options): A pointer to the options struct to be modified.
@@ -59,6 +66,11 @@ type OptionFunc func(opts *options)
 //
 // It encapsulates a task that returns an error to indicate success (nil) or failure (non-nil).
 // This type is used with the Retry function for operations that do not produce a result.
+//
+// The operation receives no context; capture the context passed to Retry if an attempt needs
+// cancellation or a deadline. It may be called multiple times, so it should be prepared to run
+// again after a failure. A panicking operation is not recovered — the panic propagates to the
+// caller of Retry.
 //
 // Returns:
 //   - err (error): The error from the operation, or nil if the operation succeeded.
@@ -87,6 +99,11 @@ func (o Operation) withEmptyData() (operationWithData OperationWithData[struct{}
 // It is used with RetryWithData to handle operations that produce a result, allowing the retrier
 // to return the successful result alongside a nil error when the operation succeeds.
 //
+// The operation receives no context; capture the context passed to RetryWithData if an attempt
+// needs cancellation or a deadline. It may be called multiple times, so it should be prepared to
+// run again after a failure. A panicking operation is not recovered — the panic propagates to
+// the caller of RetryWithData.
+//
 // Type Parameters:
 //   - T: The type of the data returned by the operation.
 //
@@ -95,92 +112,149 @@ func (o Operation) withEmptyData() (operationWithData OperationWithData[struct{}
 //   - err (error): The error from the operation, or nil if the operation succeeded.
 type OperationWithData[T any] func() (data T, err error)
 
-// WithRetryMax returns an OptionFunc that sets the maximum number of attempts.
+const (
+	// DefaultMaxAttempts is the default maximum number of attempts, counting the initial call.
+	//
+	// It applies when WithMaxAttempts is not supplied, and when a supplied value less than or
+	// equal to 0 is normalized back to the default.
+	DefaultMaxAttempts = 3
+
+	// DefaultWaitMin is the default minimum delay between retry attempts, serving as the base
+	// delay for backoff calculations.
+	//
+	// It applies when WithWaitMin is not supplied, and when a supplied value less than or
+	// equal to 0 is normalized back to the default.
+	DefaultWaitMin = 1 * time.Second
+
+	// DefaultWaitMax is the default maximum delay between retry attempts, capping the backoff
+	// duration.
+	//
+	// It applies when WithWaitMax is not supplied, and when a supplied value less than or
+	// equal to 0 is normalized back to the default.
+	DefaultWaitMax = 30 * time.Second
+)
+
+// minRetryDelay is the floor applied to the computed delay between retry attempts.
+//
+// Backoff strategies that return a non-positive delay are clamped to it, so a misconfigured
+// custom strategy cannot busy-spin the retry loop.
+const minRetryDelay = time.Millisecond
+
+// WithMaxAttempts returns an OptionFunc that sets the maximum number of attempts.
 //
 // The count includes the initial attempt, so a value of 3 means one initial call followed by up to
-// two retries. Once the limit is reached, the retrier stops and returns the last error. A value
-// less than or equal to 0 means the operation is retried indefinitely until it succeeds or the
-// context is canceled.
+// two retries. Once the limit is reached, the retrier stops and returns the last error.
 //
 // Parameters:
-//   - retryMax (int): The maximum number of attempts, including the initial one. Values less than
-//     or equal to 0 enable unlimited retries.
+//   - maxAttempts (int): The maximum number of attempts, including the initial one. Values less
+//     than or equal to 0 fall back to DefaultMaxAttempts. To retry until the context is canceled,
+//     pass a very large value such as math.MaxInt.
 //
 // Returns:
-//   - (OptionFunc): A functional option that sets the retryMax field in the options.
-func WithRetryMax(retryMax int) OptionFunc {
+//   - f (OptionFunc): A functional option that sets the maxAttempts field in the options.
+func WithMaxAttempts(maxAttempts int) (f OptionFunc) {
 	return func(opts *options) {
-		opts.retryMax = retryMax
+		opts.maxAttempts = maxAttempts
 	}
 }
 
-// WithRetryWaitMin returns an OptionFunc that sets the minimum delay between retry attempts.
+// WithWaitMin returns an OptionFunc that sets the minimum delay between retry attempts.
 //
 // It defines the base delay for backoff calculations, ensuring retries do not occur too rapidly.
 // This is particularly important for preventing overwhelming a system with rapid retries.
 //
 // Parameters:
 //   - retryWaitMin (time.Duration): The minimum delay duration. Values less than or equal to 0
-//     fall back to the default of 1 second, so a misconfigured retrier cannot spin in a
+//     fall back to DefaultWaitMin, so a misconfigured retrier cannot spin in a
 //     zero-delay loop.
 //
 // Returns:
-//   - (OptionFunc): A functional option that sets the retryWaitMin field in the options.
-func WithRetryWaitMin(retryWaitMin time.Duration) OptionFunc {
+//   - f (OptionFunc): A functional option that sets the waitMin field in the options.
+func WithWaitMin(retryWaitMin time.Duration) (f OptionFunc) {
 	return func(opts *options) {
-		opts.retryWaitMin = retryWaitMin
+		opts.waitMin = retryWaitMin
 	}
 }
 
-// WithRetryWaitMax returns an OptionFunc that sets the maximum delay between retry attempts.
+// WithWaitMax returns an OptionFunc that sets the maximum delay between retry attempts.
 //
 // It caps the backoff duration to prevent excessively long delays, ensuring retries occur within
 // a reasonable timeframe. Typically, retryWaitMax should be greater than or equal to retryWaitMin.
 //
 // Parameters:
 //   - retryWaitMax (time.Duration): The maximum delay duration. Values less than or equal to 0
-//     fall back to the default of 30 seconds, and a value below retryWaitMin is raised to
+//     fall back to DefaultWaitMax, and a value below retryWaitMin is raised to
 //     retryWaitMin.
 //
 // Returns:
-//   - (OptionFunc): A functional option that sets the retryWaitMax field in the options.
-func WithRetryWaitMax(retryWaitMax time.Duration) OptionFunc {
+//   - f (OptionFunc): A functional option that sets the waitMax field in the options.
+func WithWaitMax(retryWaitMax time.Duration) (f OptionFunc) {
 	return func(opts *options) {
-		opts.retryWaitMax = retryWaitMax
+		opts.waitMax = retryWaitMax
 	}
 }
 
-// WithRetryBackoff returns an OptionFunc that sets the backoff strategy for computing retry delays.
+// WithBackoff returns an OptionFunc that selects the backoff strategy for computing
+// retry delays.
 //
-// It allows users to specify a custom backoff strategy (from the backoff package) to calculate
-// delays based on the attempt number, minimum delay, and maximum delay. This enables flexible
-// retry policies, such as exponential backoff with or without jitter.
+// It takes a constructor rather than a ready-made strategy: the retrier calls newBackoff once per
+// Retry or RetryWithData call, after normalizing the wait bounds, so stateful strategies such as
+// the decorrelated jitter always run with fresh, per-loop state. The constructors in the backoff
+// package match this signature and can be passed directly, e.g.
+// WithBackoff(backoff.ExponentialWithFullJitter).
 //
 // Parameters:
-//   - retryBackoff (backoff.Backoff): The backoff strategy function. If nil, the default
-//     strategy (exponential backoff with decorrelated jitter) is used.
+//   - newBackoff (func(minDelay, maxDelay time.Duration) (backoff hqgoretrierbackoff.Backoff)): The backoff strategy
+//     constructor. If nil, the default strategy (exponential backoff with decorrelated jitter)
+//     is used.
 //
 // Returns:
-//   - (OptionFunc): A functional option that sets the retryBackoff field in the options.
-func WithRetryBackoff(retryBackoff hqgoretrierbackoff.Backoff) OptionFunc {
+//   - f (OptionFunc): A functional option that sets the newBackoff field in the options.
+func WithBackoff(newBackoff func(minDelay, maxDelay time.Duration) (backoff hqgoretrierbackoff.Backoff)) (f OptionFunc) {
 	return func(opts *options) {
-		opts.retryBackoff = retryBackoff
+		opts.newBackoff = newBackoff
+	}
+}
+
+// WithRetryOn returns an OptionFunc that sets a predicate deciding whether a failed attempt's
+// error is worth retrying.
+//
+// After each failed attempt the predicate is called, synchronously on the retry loop's goroutine,
+// with the attempt's error; if it returns false, the retrier stops immediately and returns that
+// error instead of scheduling another attempt. This is useful for error classes that retries
+// cannot fix, such as validation or authorization failures. A predicate shared across concurrent
+// retry loops must be safe for concurrent use.
+//
+// Parameters:
+//   - retryIf (func(err error) bool): The predicate. If nil (the default), every error is
+//     considered retryable.
+//
+// Returns:
+//   - f (OptionFunc): A functional option that sets the retryIf field in the options.
+func WithRetryOn(retryIf func(err error) bool) (f OptionFunc) {
+	return func(opts *options) {
+		opts.retryIf = retryIf
 	}
 }
 
 // WithNotifier returns an OptionFunc that sets a notifier callback for retry attempts.
 //
-// It configures a callback function that is invoked after each failed retry attempt, receiving
-// the error and the computed backoff duration. This is useful for logging, monitoring, or other
-// side effects during retries.
+// It configures a callback function that is invoked after each failed attempt that will be
+// followed by another attempt, receiving the attempt number, the error, and the computed delay
+// before the next attempt. This is useful for logging, monitoring, or other side effects during
+// retries.
+//
+// The notifier is invoked synchronously on the retry loop's goroutine — a slow notifier delays
+// the next attempt. A notifier shared across concurrent retry loops must be safe for concurrent
+// use.
 //
 // Parameters:
-//   - notifier (Notifier): The callback function to be called on each retry. If nil, no
+//   - notifier (Notifier): The callback function to be called before each retry wait. If nil, no
 //     notification is performed.
 //
 // Returns:
-//   - (OptionFunc): A functional option that sets the notifier field in the options.
-func WithNotifier(notifier Notifier) OptionFunc {
+//   - f (OptionFunc): A functional option that sets the notifier field in the options.
+func WithNotifier(notifier Notifier) (f OptionFunc) {
 	return func(opts *options) {
 		opts.notifier = notifier
 	}
@@ -188,10 +262,15 @@ func WithNotifier(notifier Notifier) OptionFunc {
 
 // Retry executes an operation with retries, respecting the provided context and options.
 //
-// It attempts the operation up to retryMax times (as specified in the options), waiting
+// It attempts the operation up to maxAttempts times (as specified in the options), waiting
 // between attempts according to the backoff strategy. If the operation succeeds (returns nil
-// error), it returns immediately. If the context is canceled or times out, it returns the
-// context's error. If all retries fail, it returns the last error from the operation.
+// error), it returns immediately. If the operation fails with an error the WithRetryOn predicate
+// rejects, it stops and returns that error. If the context is canceled or times out, it returns
+// the context's error. If all attempts fail, it returns the last error from the operation.
+//
+// The backoff strategy and the notifier both receive the 1-based number of the failed attempt,
+// and the notifier is invoked synchronously — a slow notifier delays the next attempt. Panics
+// from the operation are not recovered; they propagate to the caller and abort the retry loop.
 //
 // Parameters:
 //   - ctx (context.Context): The context controlling the retry lifecycle. Cancellation or timeout
@@ -199,10 +278,10 @@ func WithNotifier(notifier Notifier) OptionFunc {
 //   - operation (Operation): The operation to retry, which returns an error indicating success
 //     or failure.
 //   - ofs (...OptionFunc): Variadic functional options to customize retry behavior, such as
-//     maximum attempts, delay bounds, backoff strategy, and notifier.
+//     maximum attempts, delay bounds, backoff strategy, retry predicate, and notifier.
 //
 // Returns:
-//   - err (error): The error from the last attempt if all retries fail, or ctx.Err() if the
+//   - err (error): The error from the last attempt if all attempts fail, or ctx.Err() if the
 //     context is canceled or times out. Returns nil if the operation succeeds.
 func Retry(ctx context.Context, operation Operation, ofs ...OptionFunc) (err error) {
 	_, err = RetryWithData(ctx, operation.withEmptyData(), ofs...)
@@ -212,15 +291,24 @@ func Retry(ctx context.Context, operation Operation, ofs ...OptionFunc) (err err
 
 // RetryWithData executes a generic operation that returns data and an error, with retries.
 //
-// It attempts the operation up to retryMax times, using the configured backoff strategy to
+// It attempts the operation up to maxAttempts times, using the configured backoff strategy to
 // compute delays between attempts. If the operation succeeds (returns nil error), it returns
-// the operation's result and nil. If the context is canceled or times out, it returns the
-// context's error. If all retries fail, it returns the last result and error from the operation.
+// the operation's result and nil. If the operation fails with an error the WithRetryOn predicate
+// rejects, it stops and returns that error. If the context is canceled or times out, it returns
+// the context's error. If all attempts fail, it returns the last result and error from the
+// operation.
 //
-// After the options are applied, invalid values are normalized: a nil backoff falls back to
-// exponential backoff with decorrelated jitter, non-positive wait bounds fall back to their
-// defaults, and a retryWaitMax below retryWaitMin is raised to retryWaitMin. This guarantees
-// the retry loop never spins with a zero delay.
+// After the options are applied, invalid values are normalized: a nil backoff constructor falls
+// back to exponential backoff with decorrelated jitter, a non-positive attempt limit or wait
+// bound falls back to its default, and a waitMax below waitMin is raised to waitMin, so the
+// built-in strategies always run with valid bounds. Any non-positive computed delay is clamped
+// to minRetryDelay before the wait, so the retry loop never spins at full CPU. The backoff
+// strategy is constructed once per call, after normalization, so stateful strategies always run
+// with fresh state.
+//
+// The backoff strategy and the notifier both receive the 1-based number of the failed attempt,
+// and the notifier is invoked synchronously — a slow notifier delays the next attempt. Panics
+// from the operation are not recovered; they propagate to the caller and abort the retry loop.
 //
 // Parameters:
 //   - ctx (context.Context): The context controlling the retry lifecycle. Cancellation or timeout
@@ -230,36 +318,47 @@ func Retry(ctx context.Context, operation Operation, ofs ...OptionFunc) (err err
 //   - ofs (...OptionFunc): Variadic functional options to customize retry behavior.
 //
 // Returns:
-//   - result (T): The result from the operation if it succeeds, or the last result if all retries fail.
-//   - err (error): The error from the last attempt if all retries fail, or ctx.Err() if the
+//   - result (T): The result from the operation if it succeeds, or the last result if all attempts fail.
+//   - err (error): The error from the last attempt if all attempts fail, or ctx.Err() if the
 //     context is canceled or times out. Returns nil if the operation succeeds.
 func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], ofs ...OptionFunc) (result T, err error) {
 	opts := &options{
-		retryMax:     defaultRetryMax,
-		retryWaitMin: defaultRetryWaitMin,
-		retryWaitMax: defaultRetryWaitMax,
-		retryBackoff: hqgoretrierbackoff.ExponentialWithDecorrelatedJitter(),
+		maxAttempts: DefaultMaxAttempts,
+		waitMin:     DefaultWaitMin,
+		waitMax:     DefaultWaitMax,
+		newBackoff:  hqgoretrierbackoff.ExponentialWithDecorrelatedJitter,
 	}
 
 	for _, f := range ofs {
 		f(opts)
 	}
 
-	if opts.retryBackoff == nil {
-		opts.retryBackoff = hqgoretrierbackoff.ExponentialWithDecorrelatedJitter()
+	if opts.maxAttempts <= 0 {
+		opts.maxAttempts = DefaultMaxAttempts
 	}
 
-	if opts.retryWaitMin <= 0 {
-		opts.retryWaitMin = defaultRetryWaitMin
+	if opts.waitMin <= 0 {
+		opts.waitMin = DefaultWaitMin
 	}
 
-	if opts.retryWaitMax <= 0 {
-		opts.retryWaitMax = defaultRetryWaitMax
+	if opts.waitMax <= 0 {
+		opts.waitMax = DefaultWaitMax
 	}
 
-	if opts.retryWaitMax < opts.retryWaitMin {
-		opts.retryWaitMax = opts.retryWaitMin
+	if opts.waitMax < opts.waitMin {
+		opts.waitMax = opts.waitMin
 	}
+
+	if opts.newBackoff == nil {
+		opts.newBackoff = hqgoretrierbackoff.ExponentialWithDecorrelatedJitter
+	}
+
+	b := opts.newBackoff(opts.waitMin, opts.waitMax)
+
+	// timer is created lazily on the first wait and reused across attempts via Reset, avoiding
+	// one time.NewTimer allocation per failed attempt. Post-1.23 timer semantics make Reset
+	// after expiry safe without the old Stop-and-drain dance.
+	var timer *time.Timer
 
 	for attempt := 1; ; attempt++ {
 		if ctx.Err() != nil {
@@ -273,17 +372,32 @@ func RetryWithData[T any](ctx context.Context, operation OperationWithData[T], o
 			return
 		}
 
-		if opts.retryMax > 0 && attempt >= opts.retryMax {
+		if opts.retryIf != nil && !opts.retryIf(err) {
 			return
 		}
 
-		b := opts.retryBackoff(opts.retryWaitMin, opts.retryWaitMax, attempt)
-
-		if opts.notifier != nil {
-			opts.notifier(err, b)
+		if attempt >= opts.maxAttempts {
+			return
 		}
 
-		timer := time.NewTimer(b)
+		delay := b(attempt)
+
+		// A custom strategy may compute a non-positive delay; clamp it to the floor so the
+		// loop cannot busy-spin. The notifier observes the clamped delay, matching the wait
+		// that actually happens.
+		if delay <= 0 {
+			delay = minRetryDelay
+		}
+
+		if opts.notifier != nil {
+			opts.notifier(attempt, err, delay)
+		}
+
+		if timer == nil {
+			timer = time.NewTimer(delay)
+		} else {
+			timer.Reset(delay)
+		}
 
 		select {
 		case <-timer.C:

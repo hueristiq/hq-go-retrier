@@ -4,16 +4,27 @@ on:
     push:
         branches:
             - "main"
+            - "dev"
         paths:
             - '**.go'
             - '**.mod'
+            - '**.sum'
+            - '.golangci.yaml'
+            - '.github/workflows/**'
     pull_request:
         branches:
           - "main"
+          - "dev"
         paths:
             - '**.go'
             - '**.mod'
+            - '**.sum'
+            - '.golangci.yaml'
+            - '.github/workflows/**'
     workflow_dispatch:
+
+permissions:
+    contents: read
 
 jobs:
     test:
@@ -35,11 +46,9 @@ jobs:
                     fetch-depth: 0
             -
                 name: Go Module Management
-                run: |
-                    make go-mod-clean
-                    make go-mod-tidy
+                run: make go-mod-tidy
                 working-directory: .
             -
                 name: Go test
-                run: go test -v ./...
+                run: go test -v -race ./...
                 working-directory: .

@@ -55,12 +55,12 @@ func Full(backoff time.Duration) (jitter time.Duration) {
 // Decorrelated calculates a jitter duration using the decorrelated jitter strategy,
 // incorporating the previous backoff to reduce correlation between successive retries.
 //
-// This strategy draws a delay from the range [minDelay, min(maxDelay, previous * 3)], where the
+// This strategy draws a delay from the range [minDelay, min(maxDelay, previous * 3)), where the
 // upper bound grows with the previous backoff. This prevents exponential growth from becoming
 // excessive while still providing randomness to avoid synchronized retries. The computation is:
 //   - If previous is non-positive, it is set to minDelay.
 //   - The upper bound is min(maxDelay, previous * 3), computed without overflowing.
-//   - A random duration in [minDelay, upper] is returned, capped at maxDelay.
+//   - A random duration in [minDelay, upper) is returned, capped at maxDelay.
 //
 // Parameters:
 //   - minDelay (time.Duration): The minimum allowable jitter duration.
@@ -69,7 +69,7 @@ func Full(backoff time.Duration) (jitter time.Duration) {
 //     If non-positive, defaults to minDelay.
 //
 // Returns:
-//   - jitter (time.Duration): The calculated jitter duration, in [minDelay, maxDelay].
+//   - jitter (time.Duration): The calculated jitter duration, in [minDelay, maxDelay).
 //     Returns 0 if minDelay or maxDelay is negative, or if minDelay exceeds maxDelay.
 func Decorrelated(minDelay, maxDelay, previous time.Duration) (jitter time.Duration) {
 	if minDelay < 0 || maxDelay < 0 || minDelay > maxDelay {
@@ -108,5 +108,5 @@ func getRandomDuration(maxDuration time.Duration) (duration time.Duration) {
 		return 0
 	}
 
-	return time.Duration(rand.Int64N(int64(maxDuration)))
+	return time.Duration(rand.Int64N(int64(maxDuration))) //nolint:gosec // G404: cryptographic randomness is unnecessary for jitter; math/rand/v2 suffices to spread retry attempts.
 }
