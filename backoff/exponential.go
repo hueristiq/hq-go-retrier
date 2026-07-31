@@ -36,9 +36,10 @@ func zeroBackoff() (backoff Backoff) {
 
 // exponential computes the base exponential backoff for a given attempt.
 //
-// The base delay grows as minDelay * 2^attempt and is capped at maxDelay. Overflow is guarded by
-// checking against math.MaxInt64/2 before doubling and by capping as soon as the next doubling
-// would exceed maxDelay. It is the shared core used by all exponential strategies in this package.
+// The base delay grows as minDelay * 2^attempt and is capped at maxDelay. The growth is computed
+// with a single guarded shift instead of repeated doubling: an attempt whose product would
+// overflow an int64 clamps to maxDelay, exactly as the doubling loop's overflow path did. It is
+// the shared core used by all exponential strategies in this package.
 //
 // Callers must guarantee valid input — positive, ordered bounds and a non-negative attempt; the
 // constructors in this package enforce this before calling it.
@@ -51,17 +52,18 @@ func zeroBackoff() (backoff Backoff) {
 // Returns:
 //   - base (time.Duration): The exponential base delay, capped at maxDelay.
 func exponential(minDelay, maxDelay time.Duration, attempt int) (base time.Duration) {
-	base = minDelay
-
-	for range attempt {
-		if base > math.MaxInt64/2 || base*2 > maxDelay {
-			return maxDelay
-		}
-
-		base *= 2
+	if attempt < 0 {
+		return min(minDelay, maxDelay)
 	}
 
-	return min(base, maxDelay)
+	// A shift of 63 or more bits overflows every positive int64; below that, a minDelay above
+	// math.MaxInt64>>attempt would overflow when shifted. Both clamp to maxDelay, as does any
+	// product that grows past maxDelay itself.
+	if attempt > 62 || minDelay > math.MaxInt64>>attempt {
+		return maxDelay
+	}
+
+	return min(minDelay<<attempt, maxDelay)
 }
 
 // Exponential returns a Backoff function that implements a basic exponential backoff strategy.
@@ -176,7 +178,7 @@ func ExponentialWithFullJitter(minDelay, maxDelay time.Duration) (backoff Backof
 // The returned function is stateful: it remembers the last delay it produced and starts from
 // minDelay. It is safe for concurrent use, but all callers of a shared instance contribute to
 // one delay sequence — construct one instance per retry loop for independent decorrelation, which
-// Retry and RetryWithData do automatically when this constructor is passed to WithRetryBackoff.
+// Retry and RetryWithData do automatically when this constructor is passed to WithBackoff.
 // The attempt parameter is validated but otherwise unused; growth is driven by the previous delay.
 //
 // If minDelay or maxDelay is less than or equal to 0 or minDelay exceeds maxDelay, the returned

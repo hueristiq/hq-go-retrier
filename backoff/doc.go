@@ -16,9 +16,9 @@
 //
 // Jittered strategies reduce the "thundering herd" effect, where many clients that failed together
 // retry in lockstep and overwhelm a recovering service. The constructors match the signature
-// expected by [github.com/hueristiq/hq-lib-retrier-go.WithRetryBackoff], which builds a fresh
+// expected by [github.com/hueristiq/hq-lib-retrier-go.WithBackoff], which builds a fresh
 // Backoff for every retry loop — pass the constructor itself, e.g.
-// WithRetryBackoff(backoff.Exponential).
+// WithBackoff(backoff.Exponential).
 //
 // All strategies guard against integer overflow and produce a zero duration for invalid input —
 // a constructor called with non-positive bounds or a minimum above the maximum returns a Backoff

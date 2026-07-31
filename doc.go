@@ -22,22 +22,23 @@
 // Behavior is set through functional options passed to either entry point:
 //
 //   - [WithMaxAttempts] caps the number of attempts, counting the initial call.
-//   - [WithRetryWaitMin] and [WithRetryWaitMax] bound the delay between attempts.
-//   - [WithRetryBackoff] selects the strategy that computes each delay. It takes a constructor,
+//   - [WithWaitMin] and [WithWaitMax] bound the delay between attempts.
+//   - [WithBackoff] selects the strategy that computes each delay. It takes a constructor,
 //     which the retrier calls once per retry loop with the normalized bounds.
-//   - [WithRetryIf] decides per error whether another attempt is worthwhile.
+//   - [WithRetryOn] decides per error whether another attempt is worthwhile.
 //   - [WithNotifier] registers a callback invoked after every failed attempt that will be retried.
 //
 // Unset options fall back to defaults: [DefaultMaxAttempts] attempts, a minimum wait of
 // [DefaultWaitMin] and a maximum wait of [DefaultWaitMax], and exponential backoff with
 // decorrelated jitter. Invalid values are normalized the same way — a nil backoff constructor,
 // a non-positive attempt limit, or non-positive wait bounds fall back to the defaults, and a
-// maximum wait below the minimum is raised to the minimum — so retries never spin in a
-// zero-delay loop.
+// maximum wait below the minimum is raised to the minimum — so the built-in strategies always
+// run with valid bounds. Any non-positive computed delay is clamped to a one-millisecond floor,
+// so the retry loop never spins at full CPU.
 //
 // # Non-retryable errors
 //
-// Not every failure deserves another attempt. The [WithRetryIf] predicate classifies errors after
+// Not every failure deserves another attempt. The [WithRetryOn] predicate classifies errors after
 // each failed attempt; when it rejects an error, the retry loop stops immediately and returns
 // that error instead of scheduling the next one.
 //

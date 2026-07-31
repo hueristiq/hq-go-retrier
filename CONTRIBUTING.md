@@ -51,3 +51,13 @@ Assuming no existing issues exist, please [open a new issue](https://github.com/
 ### Create a Pull Request
 
 Pull requests should target the `dev` branch. Please also reference the issue from the description of the pull request using [special keyword syntax](https://help.github.com/articles/closing-issues-via-commit-messages/) to auto close the issue when the PR is merged. For example, include the phrase `fixes #14` in the PR description to have issue `#14` auto close.
+## Code Style
+
+This package follows the shared code-style conventions of the hueristiq Go libraries:
+
+- **Documentation.** Every exported symbol carries a doc comment that begins with the symbol name. Functions document their parameters and results under `Parameters:` and `Returns:` headings as `  - name (type): description` lists, and use named return parameters.
+- **Errors.** Error strings are lowercase, carry no trailing punctuation, and are prefixed with the producing function (for example `package.Func: message`). Sentinel errors live in package-level vars; underlying errors are wrapped with `%w`.
+- **Configuration.** Functional options named `WithX` over an unexported options struct are the default; a config struct or fluent builder is used where it fits the domain better.
+- **Interfaces.** A type that implements an interface declares a compile-time assertion (`var _ Iface = (*T)(nil)`).
+- **Naming.** MixedCaps with uniform-case initialisms (`URL`, `ID`, `TLS`); accessors are not prefixed with `Get`.
+- **Formatting.** Code is `gofmt`/`goimports` clean, with imports grouped standard library / external / `github.com/hueristiq`. Style is enforced mechanically by the repo-pinned `golangci-lint` configuration — run `make go-lint` before submitting.
