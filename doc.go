@@ -26,7 +26,7 @@
 //   - [WithBackoff] selects the strategy that computes each delay. It takes a constructor,
 //     which the retrier calls once per retry loop with the normalized bounds.
 //   - [WithRetryOn] decides per error whether another attempt is worthwhile.
-//   - [WithNotifier] registers a callback invoked after every failed attempt that will be retried.
+//   - [WithOnRetry] registers the callback invoked after every failed attempt that will be retried.
 //
 // Unset options fall back to defaults: [DefaultMaxAttempts] attempts, a minimum wait of
 // [DefaultWaitMin] and a maximum wait of [DefaultWaitMax], and exponential backoff with
@@ -60,13 +60,14 @@
 // # Concurrency
 //
 // The entry points are safe to call from multiple goroutines: every call is independent and
-// constructs its own backoff state. Callbacks — the notifier and the retry predicate — are
-// invoked synchronously on the retry loop's goroutine; a callback shared across concurrent loops
-// must itself be safe for concurrent use.
+// constructs its own backoff state. Callbacks — the OnRetry callback and the retry predicate —
+// are invoked synchronously on the retry loop's goroutine; a callback shared across concurrent
+// loops must itself be safe for concurrent use.
 //
 // # Panics
 //
 // A panicking operation is not recovered: the panic propagates to the caller and aborts the
 // retry loop. Recover inside the operation and convert the panic into an error if it should be
-// retried.
+// retried. A panicking OnRetry callback likewise propagates, aborting the retry loop the same
+// way.
 package retrier

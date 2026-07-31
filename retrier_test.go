@@ -296,16 +296,10 @@ func TestRetry_RetryIf(t *testing.T) {
 	})
 }
 
-func TestRetry_NotifierReceivesAttemptErrorAndWait(t *testing.T) {
+func TestRetry_OnRetryReceivesAttemptErrorAndWait(t *testing.T) {
 	t.Parallel()
 
-	type notification struct {
-		attempt int
-		err     error
-		wait    time.Duration
-	}
-
-	var got []notification
+	var got []hqgoretrier.RetryEvent
 
 	perAttempt := func(_, _ time.Duration) hqgoretrierbackoff.Backoff {
 		return func(attempt int) time.Duration {
@@ -320,22 +314,22 @@ func TestRetry_NotifierReceivesAttemptErrorAndWait(t *testing.T) {
 		op.run,
 		hqgoretrier.WithMaxAttempts(5),
 		hqgoretrier.WithBackoff(perAttempt),
-		hqgoretrier.WithNotifier(func(attempt int, err error, wait time.Duration) {
-			got = append(got, notification{attempt: attempt, err: err, wait: wait})
+		hqgoretrier.WithOnRetry(func(ev hqgoretrier.RetryEvent) {
+			got = append(got, ev)
 		}),
 	)
 
 	require.NoError(t, err, "Expected the operation to succeed after retries")
-	require.Len(t, got, 2, "Expected the notifier to fire once per failed attempt that is retried")
+	require.Len(t, got, 2, "Expected the OnRetry callback to fire once per failed attempt that is retried")
 
-	for i, n := range got {
-		assert.Equal(t, i+1, n.attempt, "Expected the 1-based number of the failed attempt")
-		require.ErrorIs(t, n.err, errTestOperation, "Expected the notifier to receive the failure")
-		assert.Equal(t, time.Duration(i+1)*time.Millisecond, n.wait, "Expected the computed delay")
+	for i, ev := range got {
+		assert.Equal(t, i+1, ev.Attempt, "Expected the 1-based number of the failed attempt")
+		require.ErrorIs(t, ev.Err, errTestOperation, "Expected the OnRetry callback to receive the failure")
+		assert.Equal(t, time.Duration(i+1)*time.Millisecond, ev.Wait, "Expected the computed delay")
 	}
 }
 
-func TestRetry_NotifierSkipsFinalAttempt(t *testing.T) {
+func TestRetry_OnRetrySkipsFinalAttempt(t *testing.T) {
 	t.Parallel()
 
 	calls := 0
@@ -347,16 +341,16 @@ func TestRetry_NotifierSkipsFinalAttempt(t *testing.T) {
 		op.run,
 		hqgoretrier.WithMaxAttempts(3),
 		hqgoretrier.WithBackoff(noWaitBackoff),
-		hqgoretrier.WithNotifier(func(int, error, time.Duration) {
+		hqgoretrier.WithOnRetry(func(hqgoretrier.RetryEvent) {
 			calls++
 		}),
 	)
 
 	require.ErrorIs(t, err, errTestOperation, "Expected the last operation error")
-	assert.Equal(t, 2, calls, "Expected the notifier to fire only before the waits, not after the final failure")
+	assert.Equal(t, 2, calls, "Expected the OnRetry callback to fire only before the waits, not after the final failure")
 }
 
-func TestRetry_NotifierSilentWithoutUpcomingRetry(t *testing.T) {
+func TestRetry_OnRetrySilentWithoutUpcomingRetry(t *testing.T) {
 	t.Parallel()
 
 	t.Run("rejected by predicate", func(t *testing.T) {
@@ -372,7 +366,7 @@ func TestRetry_NotifierSilentWithoutUpcomingRetry(t *testing.T) {
 			hqgoretrier.WithMaxAttempts(5),
 			hqgoretrier.WithBackoff(noWaitBackoff),
 			hqgoretrier.WithRetryOn(func(error) bool { return false }),
-			hqgoretrier.WithNotifier(func(int, error, time.Duration) {
+			hqgoretrier.WithOnRetry(func(hqgoretrier.RetryEvent) {
 				notified++
 			}),
 		)
@@ -380,6 +374,25 @@ func TestRetry_NotifierSilentWithoutUpcomingRetry(t *testing.T) {
 		require.ErrorIs(t, err, errTestOperation, "Expected the rejected error")
 		assert.Zero(t, notified, "Expected no notification when no retry follows a rejected error")
 	})
+}
+
+func TestRetry_OnRetryPanicPropagates(t *testing.T) {
+	t.Parallel()
+
+	op := &flakyOperation{failures: 1}
+
+	require.Panics(t, func() {
+		_ = hqgoretrier.Retry(
+			t.Context(),
+			op.run,
+			hqgoretrier.WithMaxAttempts(5),
+			hqgoretrier.WithBackoff(noWaitBackoff),
+			hqgoretrier.WithOnRetry(func(hqgoretrier.RetryEvent) {
+				panic("OnRetry observer failed")
+			}),
+		)
+	}, "Expected a panicking OnRetry callback to propagate its panic")
+	assert.Equal(t, 1, op.calls, "Expected the panic to abort the retry loop after the first attempt")
 }
 
 func TestRetry_ZeroDelayBackoffIsClampedToFloor(t *testing.T) {
@@ -396,8 +409,8 @@ func TestRetry_ZeroDelayBackoffIsClampedToFloor(t *testing.T) {
 		op.run,
 		hqgoretrier.WithMaxAttempts(3),
 		hqgoretrier.WithBackoff(noWaitBackoff), // computes a zero delay on every attempt
-		hqgoretrier.WithNotifier(func(_ int, _ error, wait time.Duration) {
-			waits = append(waits, wait)
+		hqgoretrier.WithOnRetry(func(ev hqgoretrier.RetryEvent) {
+			waits = append(waits, ev.Wait)
 		}),
 	)
 
@@ -405,10 +418,10 @@ func TestRetry_ZeroDelayBackoffIsClampedToFloor(t *testing.T) {
 
 	require.ErrorIs(t, err, errTestOperation, "Expected the last operation error")
 	assert.Equal(t, 3, op.calls, "Expected the loop to stop at maxAttempts rather than spin")
-	require.Len(t, waits, 2, "Expected the notifier to fire once per wait between attempts")
+	require.Len(t, waits, 2, "Expected the OnRetry callback to fire once per wait between attempts")
 
 	for _, wait := range waits {
-		assert.Equal(t, time.Millisecond, wait, "Expected the notifier to observe the zero delay clamped to the 1 ms floor")
+		assert.Equal(t, time.Millisecond, wait, "Expected the OnRetry callback to observe the zero delay clamped to the 1 ms floor")
 	}
 
 	assert.Less(t, elapsed, 5*time.Second, "Expected the clamped loop to finish near the floor delay per wait")
