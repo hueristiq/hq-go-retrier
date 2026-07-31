@@ -9,22 +9,18 @@
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-	- [Basic Retry](#basic-retry)
+	- [Retry](#retry)
 	- [Retry With Data](#retry-with-data)
 	- [Non-Retryable Errors](#non-retryable-errors)
 - [Configuration](#configuration)
-- [Backoff & Jitter Strategies](#backoff--jitter-strategies)
 - [Contributing](#contributing)
 - [Licensing](#licensing)
 
 ## Features
 
 - **Configurable Retry Policy:** Max attempts, min/max delays, and backoff strategy.
-- **Context Support:** Cancellation and deadlines are observed during attempts and waits.
 - **Result-Carrying Operations:** `RetryWithData` retries operations that return a value.
-- **Non-Retryable Errors:** The `WithRetryOn` predicate stops the loop on failures retry cannot fix.
-- **Notifier Callback:** Fires after each retried failure with the attempt, error, and next delay.
-- **Backoff and Jitter Strategies:** Exponential backoff with equal, full, or decorrelated jitter.
+- **Context Support:** Cancellation and deadlines are observed during attempts and waits.
 
 ## Installation
 
@@ -42,9 +38,9 @@ The examples below import the package under the `hqgoretrier` alias.
 import hqgoretrier "github.com/hueristiq/hq-lib-retrier-go"
 ```
 
-### Basic Retry
+### Retry
 
-Use `Retry` for operations that return only an error, such as network requests or file operations:
+Use `Retry` for operations that return only an error:
 
 ```go
 package main
@@ -80,8 +76,8 @@ func main() {
 		hqgoretrier.WithWaitMin(100*time.Millisecond),
 		hqgoretrier.WithWaitMax(2*time.Second),
 		hqgoretrier.WithBackoff(hqgoretrierbackoff.ExponentialWithFullJitter),
-		hqgoretrier.WithNotifier(func(attempt int, err error, next time.Duration) {
-			fmt.Printf("Attempt %d failed: %v. Next attempt in %v.\n", attempt, err, next)
+		hqgoretrier.WithOnRetry(func(event hqgoretrier.RetryEvent) {
+			fmt.Printf("Attempt %d failed: %v. Next attempt in %v.\n", event.Attempt, event.Err, event.Wait)
 		}),
 	)
 	if err != nil {
@@ -94,7 +90,7 @@ func main() {
 
 ### Retry With Data
 
-Use `RetryWithData` for operations that return both a result and an error, such as fetching data from an API. The result type is inferred from the operation, so no type assertions are needed:
+Use `RetryWithData` for operations that return both a result and an error:
 
 ```go
 package main
@@ -130,8 +126,8 @@ func main() {
 		hqgoretrier.WithWaitMin(200*time.Millisecond),
 		hqgoretrier.WithWaitMax(3*time.Second),
 		hqgoretrier.WithBackoff(hqgoretrierbackoff.Exponential),
-		hqgoretrier.WithNotifier(func(attempt int, err error, next time.Duration) {
-			fmt.Printf("Attempt %d failed: %v, waiting %v.\n", attempt, err, next)
+		hqgoretrier.WithOnRetry(func(event hqgoretrier.RetryEvent) {
+			fmt.Printf("Attempt %d failed: %v, waiting %v.\n", event.Attempt, event.Err, event.Wait)
 		}),
 	)
 	if err != nil {
@@ -146,7 +142,7 @@ func main() {
 
 ### Non-Retryable Errors
 
-Not every failure deserves another attempt — a `400 Bad Request` fails the same way every time. `WithRetryOn(fn)` classifies errors after each failed attempt; when it returns `false`, the retry loop stops immediately and returns the offending error instead of scheduling the next one:
+Not every failure deserves another attempt. `WithRetryOn(fn)` classifies errors after each failed attempt; when it returns `false`, the retry loop stops immediately and returns the offending error instead of scheduling the next one:
 
 ```go
 err := hqgoretrier.Retry(ctx, operation,
@@ -167,32 +163,9 @@ Behavior is set through functional options passed to `Retry` or `RetryWithData`.
 | `WithWaitMax(d)` | Upper bound for the delay between attempts. A value `<= 0` falls back to the default; a value below the minimum is raised to the minimum. | `DefaultWaitMax` (`30s`) |
 | `WithBackoff(fn)` | Constructor for the strategy that computes each delay (see below). It is called once per retry loop with the normalized bounds, so stateful strategies always get fresh state. Passing `nil` selects the default. | `backoff.ExponentialWithDecorrelatedJitter` |
 | `WithRetryOn(fn)` | Predicate deciding whether a failed attempt's error is retryable; returning `false` stops retrying and returns that error. | retry all errors |
-| `WithNotifier(fn)` | Callback invoked after each failed attempt that will be retried, receiving the attempt number, the error, and the next delay. | none |
+| `WithOnRetry(fn)` | Callback invoked after each failed attempt that will be retried, receiving a RetryEvent with the attempt number, the error, and the next delay. | none |
 
 Invalid values are normalized before the first attempt, and any non-positive delay a strategy computes is clamped to a 1 ms floor, so the retry loop never spins at full CPU.
-
-## Backoff & Jitter Strategies
-
-The delay between attempts is produced by a `backoff.Backoff` function — `func(attempt int) (delay time.Duration)`. Constructors take the delay bounds and return the ready-to-use strategy; the retrier calls the constructor once per retry loop with the normalized bounds, so stateful strategies always see fresh per-loop state. The `backoff` package provides exponential strategies, where the base delay grows as `min(maxDelay, minDelay * 2^attempt)`. Jitter adds randomness so that clients which failed together do not retry in lockstep.
-
-| Strategy | Delay range | Notes |
-| --- | --- | --- |
-| `Exponential(min, max)` | `base` | Deterministic; no jitter. |
-| `ExponentialWithEqualJitter(min, max)` | `[base/2, base)` | Half the delay is fixed, half is random. |
-| `ExponentialWithFullJitter(min, max)` | `[0, base)` | Fully randomized; spreads retries most aggressively. |
-| `ExponentialWithDecorrelatedJitter(min, max)` | `[min, min(max, previous*3))` | Default; decouples successive delays. Stateful. |
-
-Here `base` is `min(maxDelay, minDelay * 2^attempt)` and `previous` is the delay the strategy produced on its preceding call — the decorrelated strategy remembers its last delay, so each draw depends on the previous random draw (true decorrelated jitter). It is safe for concurrent use. All strategies guard against integer overflow and produce a zero duration for invalid input (a constructor called with non-positive bounds or a minimum above the maximum, or a negative attempt).
-
-The jitter functions are also exported directly from the [`jitter`](https://pkg.go.dev/github.com/hueristiq/hq-lib-retrier-go/jitter) package for building custom strategies. To implement your own, pass a constructor to `WithBackoff`:
-
-```go
-hqgoretrier.WithBackoff(func(minDelay, maxDelay time.Duration) hqgoretrierbackoff.Backoff {
-	return func(attempt int) time.Duration {
-		return minDelay // constant backoff
-	}
-})
-```
 
 ## Contributing
 
